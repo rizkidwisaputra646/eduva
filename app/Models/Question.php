@@ -14,6 +14,7 @@ class Question extends Model
         'question_text',
         'type', // 'multiple_choice' or 'essay'
         'points',
+        'explanation',
     ];
 
     public function quiz()

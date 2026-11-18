@@ -99,8 +99,62 @@ class GeminiService
             ];
         }
 
-        $contents = $normalized;
+        $generationConfig = [
+            'temperature' => $temperature,
+            'maxOutputTokens' => 2048,
+            'topP' => 0.95,
+        ];
 
+        return $this->executeRequest($systemInstruction, $normalized, $generationConfig, 30);
+    }
+
+    /**
+     * Generate a structured JSON response from Gemini (used by AI Question Generator).
+     *
+     * @return array ['success' => bool, 'content' => string, 'model' => ?string, 'error' => ?string]
+     */
+    public function generateJson(
+        string $systemInstruction,
+        string $userPrompt,
+        float $temperature = 0.4,
+        int $maxOutputTokens = 8192
+    ): array {
+        if (!$this->isConfigured()) {
+            return [
+                'success' => false,
+                'content' => '',
+                'error' => 'API Key Gemini belum dikonfigurasi di file .env (GEMINI_API_KEY).',
+            ];
+        }
+
+        $contents = [
+            [
+                'role' => 'user',
+                'parts' => [
+                    ['text' => $userPrompt],
+                ],
+            ],
+        ];
+
+        $generationConfig = [
+            'temperature' => $temperature,
+            'maxOutputTokens' => $maxOutputTokens,
+            'topP' => 0.95,
+            'responseMimeType' => 'application/json',
+        ];
+
+        return $this->executeRequest($systemInstruction, $contents, $generationConfig, 60);
+    }
+
+    /**
+     * Execute Gemini API call across primary and fallback models.
+     */
+    protected function executeRequest(
+        string $systemInstruction,
+        array $contents,
+        array $generationConfig,
+        int $timeoutSeconds = 30
+    ): array {
         $modelsToTry = array_unique(array_merge([$this->primaryModel], $this->fallbackModels));
         $lastError = 'Gagal menghubungi server AI.';
 
@@ -114,15 +168,11 @@ class GeminiService
                     ]
                 ],
                 'contents' => $contents,
-                'generationConfig' => [
-                    'temperature' => $temperature,
-                    'maxOutputTokens' => 2048,
-                    'topP' => 0.95,
-                ]
+                'generationConfig' => $generationConfig,
             ];
 
             try {
-                $response = Http::timeout(30)
+                $response = Http::timeout($timeoutSeconds)
                     ->withHeaders(['Content-Type' => 'application/json'])
                     ->post($url, $payload);
 
@@ -166,7 +216,6 @@ class GeminiService
                 Log::warning("Gemini API call failed with model {$model}: HTTP {$status} - {$message}");
 
                 if ($status === 404 && str_contains($message, 'is no longer available')) {
-                    // Try next model
                     $lastError = "Model {$model} tidak tersedia, mencoba model alternatif...";
                     continue;
                 }

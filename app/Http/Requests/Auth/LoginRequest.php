@@ -28,7 +28,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'identity_number' => ['required_without:email', 'nullable', 'string'],
+            'email' => ['required_without:identity_number', 'nullable', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,15 +43,50 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $identifier = (string) ($this->input('identity_number') ?: $this->input('email'));
+        $password = (string) $this->input('password');
+
+        // Cek login via identity_number (NIM/NIP/Admin)
+        $authenticated = Auth::attempt([
+            'identity_number' => $identifier,
+            'password' => $password,
+        ], $this->boolean('remember'));
+
+        // Fallback login via email untuk fleksibilitas
+        if (! $authenticated) {
+            $authenticated = Auth::attempt([
+                'email' => $identifier,
+                'password' => $password,
+            ], $this->boolean('remember'));
+        }
+
+        if (! $authenticated) {
+            \App\Models\ActivityLog::record('auth.failed', "Percobaan login gagal untuk identitas: {$identifier}");
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'identity_number' => 'NIM/NIP atau password yang Anda masukkan tidak sesuai.',
+            ]);
+        }
+
+        $user = Auth::user();
+
+        // Pemeriksaan status akun aktif/nonaktif
+        if ($user && isset($user->is_active) && !$user->is_active) {
+            Auth::logout();
+            $this->session()->invalidate();
+            $this->session()->regenerateToken();
+
+            \App\Models\ActivityLog::record('auth.blocked', "Upaya login ditolak karena akun dinonaktifkan: {$user->name} ({$user->identity_number})", $user);
+
+            throw ValidationException::withMessages([
+                'identity_number' => 'Akun Anda sedang dinonaktifkan oleh Administrator. Silakan hubungi admin sistem.',
             ]);
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        \App\Models\ActivityLog::record('auth.login', "Pengguna {$user->name} ({$user->identity_number}) berhasil masuk ke sistem.", $user);
     }
 
     /**
@@ -69,7 +105,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'identity_number' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -81,6 +117,7 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        $id = $this->input('identity_number') ?: $this->input('email');
+        return Str::transliterate(Str::lower($id).'|'.$this->ip());
     }
 }

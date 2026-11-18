@@ -10,6 +10,15 @@ class MaterialController extends Controller
 {
     public function store(Request $request, Course $course)
     {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user && ($user->role === 'siswa' || ($user->role === 'guru' && $course->teacher_id !== $user->id))) {
+            abort(403, 'Anda tidak memiliki akses untuk menambahkan materi pada kelas ini.');
+        }
+
+        if (!$request->filled('topic') && $request->filled('meeting_id')) {
+            $request->merge(['topic' => $request->input('meeting_id')]);
+        }
+
         $request->validate([
             'topic' => 'required|string|max:255',
             'type' => 'required|in:file,page,video,label',

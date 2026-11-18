@@ -20,9 +20,12 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'identity_number',
         'email',
         'password',
         'role',
+        'must_change_password',
+        'is_active',
     ];
 
     /**
@@ -45,11 +48,32 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function getIdentityLabelAttribute(): string
+    {
+        return match($this->role) {
+            'guru' => 'NIP',
+            'siswa' => 'NIM',
+            default => 'ID/Username',
+        };
     }
 
     public function enrolledCourses()
     {
         return $this->belongsToMany(Course::class, 'course_user', 'user_id', 'course_id');
+    }
+
+    public function courses()
+    {
+        return $this->hasMany(Course::class, 'teacher_id');
+    }
+
+    public function examLogs()
+    {
+        return $this->hasMany(ExamLog::class);
     }
 }

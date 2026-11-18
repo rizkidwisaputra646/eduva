@@ -14,6 +14,11 @@ class Course extends Model
         'description',
         'teacher_id',
         'invitation_code',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     public function teacher()

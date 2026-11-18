@@ -18,8 +18,14 @@
         @method('patch')
 
         <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
+            <label class="block text-xs font-semibold text-gray-700 mb-1">{{ $user->identity_label }} (ID Login)</label>
+            <input type="text" value="{{ $user->identity_number ?: '-' }}" disabled class="w-full text-xs font-mono rounded-xl border-gray-200 bg-gray-50 text-gray-600 font-bold" />
+            <p class="text-[11px] text-gray-400 mt-1">Nomor identitas login utama dikelola oleh administrator sekolah.</p>
+        </div>
+
+        <div>
+            <x-input-label for="name" :value="__('Nama Lengkap')" />
+            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full text-xs" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 

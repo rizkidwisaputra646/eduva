@@ -18,12 +18,21 @@ class PasswordController extends Controller
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
+        ], [
+            'current_password.current_password' => 'Password lama yang Anda masukkan tidak sesuai.',
+            'password.confirmed' => 'Konfirmasi password baru tidak cocok.',
+            'password.min' => 'Password baru minimal harus terdiri dari 8 karakter.',
         ]);
 
         $request->user()->update([
             'password' => Hash::make($validated['password']),
+            'must_change_password' => false,
         ]);
 
-        return back()->with('status', 'password-updated');
+        \App\Models\ActivityLog::record('auth.password_change', "Pengguna {$request->user()->name} ({$request->user()->identity_number}) berhasil memperbarui password.");
+
+        return back()
+            ->with('status', 'password-updated')
+            ->with('success', 'Password Anda berhasil diubah! Silakan gunakan password baru ini untuk login berikutnya.');
     }
 }

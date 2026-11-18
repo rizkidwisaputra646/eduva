@@ -27,8 +27,17 @@ class SubmissionController extends Controller
     public function index(\App\Models\Quiz $quiz)
     {
         // For teacher to view submissions
+        $quiz->load(['course', 'questions.options']);
         $submissions = \App\Models\Submission::where('quiz_id', $quiz->id)->with('user')->get();
-        return view('submissions.index', compact('quiz', 'submissions'));
+
+        // Load exam logs grouped by user_id for anti-cheat violation tracking
+        $examLogs = \App\Models\ExamLog::where('quiz_id', $quiz->id)
+            ->with('user')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->groupBy('user_id');
+
+        return view('submissions.index', compact('quiz', 'submissions', 'examLogs'));
     }
 
     public function grade(\Illuminate\Http\Request $request, \App\Models\Submission $submission)

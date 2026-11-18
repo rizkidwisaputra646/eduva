@@ -12,12 +12,23 @@ class AttendanceController extends Controller
 {
     public function store(Request $request, Course $course)
     {
+        $user = Auth::user();
+        if ($user && ($user->role === 'siswa' || ($user->role === 'guru' && $course->teacher_id !== $user->id))) {
+            abort(403, 'Anda tidak memiliki akses untuk membuat sesi presensi pada kelas ini.');
+        }
+
+        if (!$request->filled('topic') && $request->filled('meeting_id')) {
+            $request->merge(['topic' => $request->input('meeting_id')]);
+        }
+
         $request->validate([
             'topic' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'start_time' => 'required|date',
             'end_time' => 'required|date|after:start_time',
+        ], [
+            'end_time.after' => 'Waktu selesai presensi harus lebih lambat dari waktu mulai presensi.',
         ]);
 
         $course->attendances()->create([

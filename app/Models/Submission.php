@@ -9,7 +9,11 @@ class Submission extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['quiz_id', 'user_id', 'file_path', 'score', 'feedback'];
+    protected $fillable = ['quiz_id', 'user_id', 'file_path', 'answers', 'score', 'feedback'];
+
+    protected $casts = [
+        'answers' => 'array',
+    ];
 
     public function user()
     {

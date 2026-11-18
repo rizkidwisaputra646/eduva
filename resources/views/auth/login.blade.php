@@ -10,11 +10,11 @@
     <form method="POST" action="{{ route('login') }}" class="space-y-5">
         @csrf
 
-        <!-- Email Address -->
+        <!-- NIM / NIP / ID Pengguna -->
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input id="email" class="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-20 transition-all text-sm" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="contoh@sekolah.edu" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2 text-sm text-red-600" />
+            <label for="identity_number" class="block text-sm font-semibold text-gray-700 mb-1">NIM / NIP / ID Pengguna</label>
+            <input id="identity_number" class="block w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-20 transition-all text-sm font-medium" type="text" name="identity_number" :value="old('identity_number')" required autofocus autocomplete="username" placeholder="Masukkan NIM (Siswa), NIP (Guru), atau 'admin'" />
+            <x-input-error :messages="$errors->get('identity_number')" class="mt-2 text-sm text-red-600" />
         </div>
 
         <!-- Password -->
