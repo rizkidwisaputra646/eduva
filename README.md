@@ -21,6 +21,18 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Anggota Kelompok
+
+| Nama | NIM |
+| --- | --- |
+| Rizki Dwi Saputra | 24312049 |
+| Erwin Wijaya | 24312092 |
+| Jagarya Vanneska | 24312069 |
+| Dionisius Avendrata Putra | 24312062 |
+| Greys Olan Timothy Siallagan | 24312096 |
+
+**Universitas Teknokrat Indonesia**
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
@@ -57,4 +69,32 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# eduva
+# Eduva — menjalankan secara lokal
+
+Prasyarat: PHP 8.2+ dengan ekstensi SQLite, Composer, dan Node.js yang kompatibel dengan Vite 7 (lokal ini menggunakan Node.js 24).
+
+Setup awal dari direktori proyek (PowerShell):
+
+```powershell
+composer install
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+if (!(Test-Path database/database.sqlite)) { New-Item database/database.sqlite -ItemType File }
+php artisan key:generate
+php artisan migrate --seed
+php artisan storage:link
+npm.cmd ci
+npm.cmd run build
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+Gunakan `DB_CONNECTION=sqlite` dan `APP_URL=http://127.0.0.1:8000` di `.env`. Buka http://127.0.0.1:8000. Untuk menjalankan kembali setelah setup, cukup jalankan perintah `php artisan serve` di atas. Saat mengedit frontend, jalankan `npm.cmd run dev` di terminal kedua.
+
+Akun demo lokal (password semua akun: `password`):
+
+| Peran | NIM/NIP/identitas | Email |
+| --- | --- | --- |
+| Admin | admin | admin@eduva.com |
+| Guru | 198501012010011001 | guru@eduva.com |
+| Siswa | 202401001 | siswa@eduva.com |
+
+Fitur AI memerlukan `GEMINI_API_KEY` di `.env`. Email lokal menggunakan mailer `log`, sehingga pesan masuk ke `storage/logs/laravel.log`.
