@@ -1,25 +1,8 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Eduva — Learning Management System (LMS)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Eduva adalah platform Learning Management System modern berbasis Laravel yang dilengkapi dengan AI Tutor kontekstual, AI Quiz Generator, ujian online berfitur anti-cheat, serta manajemen akademik terpadu.
 
-## About Laravel
-
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
-
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
 ## Anggota Kelompok
 
@@ -33,68 +16,97 @@ Laravel is accessible, powerful, and provides tools required for large, robust a
 
 **Universitas Teknokrat Indonesia**
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Fitur Utama
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Role-Based Access Control (RBAC)**: Admin, Guru, dan Siswa dengan alur login NIM/NIP/Username.
+- **Manajemen Akademik**: Tahun ajaran, kelas, penempatan siswa, serta rekap nilai dan presensi.
+- **AI Tutor Terintegrasi**: Chatbot AI kontekstual per pertemuan/materi (Google Gemini API).
+- **AI Quiz Generator & Document Parser**: Ekstrak materi dari PDF/DOCX/PPTX untuk pembuatan soal kuis otomatis.
+- **Ujian Online & Anti-Cheat**: Deteksi tab-switch, durasi ujian berbasis server-timer, dan auto-submit saat timeout.
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Prasyarat Sistem
 
-### Premium Partners
+- PHP 8.2+
+- Ekstensi PHP aktif: `zip`, `sqlite3`, `pdo_sqlite`, `mbstring`, `openssl`, `curl`
+- Composer 2.x
+- Node.js 18+ & NPM
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## Setup Lokal
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Jalankan perintah berikut di terminal (PowerShell / Bash):
 
-## Code of Conduct
+```bash
+# 1. Masuk direktori
+cd eduva
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# 2. Salin env file
+cp .env.example .env
+# Windows PowerShell: if (!(Test-Path .env)) { Copy-Item .env.example .env }
 
-## Security Vulnerabilities
+# 3. Buat database SQLite lokal
+touch database/database.sqlite
+# Windows PowerShell: if (!(Test-Path database/database.sqlite)) { New-Item database/database.sqlite -ItemType File }
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# Eduva — menjalankan secara lokal
-
-Prasyarat: PHP 8.2+ dengan ekstensi SQLite, Composer, dan Node.js yang kompatibel dengan Vite 7 (lokal ini menggunakan Node.js 24).
-
-Setup awal dari direktori proyek (PowerShell):
-
-```powershell
+# 4. Install dependensi
 composer install
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
-if (!(Test-Path database/database.sqlite)) { New-Item database/database.sqlite -ItemType File }
+npm install
+
+# 5. Generate app key, migrate schema & seed data
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
-npm.cmd ci
-npm.cmd run build
-php artisan serve --host=127.0.0.1 --port=8000
+
+# 6. Build aset frontend
+npm run build
 ```
 
-Gunakan `DB_CONNECTION=sqlite` dan `APP_URL=http://127.0.0.1:8000` di `.env`. Buka http://127.0.0.1:8000. Untuk menjalankan kembali setelah setup, cukup jalankan perintah `php artisan serve` di atas. Saat mengedit frontend, jalankan `npm.cmd run dev` di terminal kedua.
+---
 
-Akun demo lokal (password semua akun: `password`):
+## Menjalankan Aplikasi
 
-| Peran | NIM/NIP/identitas | Email |
+Jalankan server aplikasi:
+
+```bash
+# Terminal 1 - Backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+# Terminal 2 - Frontend HMR (saat development)
+npm run dev
+```
+
+Akses web di: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+---
+
+## Akun Demo
+
+Password default semua akun: `password`
+
+| Peran | NIM / NIP / Username | Email |
 | --- | --- | --- |
-| Admin | admin | admin@eduva.com |
-| Guru | 198501012010011001 | guru@eduva.com |
-| Siswa | 202401001 | siswa@eduva.com |
+| **Admin** | `admin` | `admin@eduva.com` |
+| **Guru** | `198501012010011001` | `guru@eduva.com` |
+| **Siswa** | `202401001` | `siswa@eduva.com` |
 
-Fitur AI memerlukan `GEMINI_API_KEY` di `.env`. Email lokal menggunakan mailer `log`, sehingga pesan masuk ke `storage/logs/laravel.log`.
+---
+
+## Konfigurasi Tambahan (.env)
+
+- **AI Tutor / Generator**: Isi `GEMINI_API_KEY=your_api_key_here` di `.env` untuk integrasi AI.
+- **Email Log**: Default `MAIL_MAILER=log`, pesan tercatat di `storage/logs/laravel.log`.
+
+---
+
+## Pengujian (Testing)
+
+Jalankan automated test suite:
+
+```bash
+php artisan test
+```
