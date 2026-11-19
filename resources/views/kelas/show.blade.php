@@ -536,8 +536,8 @@
                                                     <span x-text="expanded ? 'Tutup Detail' : 'Buka Detail'"></span>
                                                 </button>
 
-                                                <!-- Tanya AI (Khusus Materi) -->
-                                                @if($item->activity_type === 'material')
+                                                <!-- Tanya AI (Khusus Siswa & Materi) -->
+                                                @if(Auth::user()->role === 'siswa' && $item->activity_type === 'material')
                                                 <a href="{{ route('ai-tutor.index', ['course_id' => $course->id, 'meeting_id' => $item->id]) }}" class="w-full text-left px-3 py-1.5 text-[#438FCE] hover:bg-[#DFEAF9]/40 flex items-center gap-2 font-medium">
                                                     <svg class="w-3.5 h-3.5 text-[#438FCE]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                                     <span>Tanya AI Tutor</span>
@@ -667,22 +667,26 @@
                                                 </a>
                                                 @endif
                                             @endif
+                                            @if(Auth::user()->role === 'siswa')
                                             <div class="pt-1 flex items-center gap-2">
                                                 <a href="{{ route('ai-tutor.index', ['course_id' => $course->id, 'meeting_id' => $item->id]) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-indigo-50 text-primary border border-indigo-100 hover:bg-primary hover:text-white transition-colors">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                                     Tanya AI Tutor
                                                 </a>
                                             </div>
+                                            @endif
                                         @elseif($item->type === 'page')
                                             <div class="prose prose-sm max-w-none text-gray-700 bg-white p-3.5 rounded-xl border border-gray-200 whitespace-pre-line leading-relaxed">
                                                 {{ $item->content }}
                                             </div>
+                                            @if(Auth::user()->role === 'siswa')
                                             <div class="pt-1 flex items-center gap-2">
                                                 <a href="{{ route('ai-tutor.index', ['course_id' => $course->id, 'meeting_id' => $item->id]) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-indigo-50 text-primary border border-indigo-100 hover:bg-primary hover:text-white transition-colors">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                                     Tanya AI Tutor
                                                 </a>
                                             </div>
+                                            @endif
                                         @else
                                             <!-- File Document -->
                                             @if($item->content)
@@ -695,10 +699,12 @@
                                                     Unduh Dokumen ({{ strtoupper(pathinfo($item->file_path, PATHINFO_EXTENSION)) }})
                                                 </a>
                                                 @endif
+                                                @if(Auth::user()->role === 'siswa')
                                                 <a href="{{ route('ai-tutor.index', ['course_id' => $course->id, 'meeting_id' => $item->id]) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-indigo-50 text-primary border border-indigo-100 hover:bg-primary hover:text-white transition-colors">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                                     Tanya AI Tutor
                                                 </a>
+                                                @endif
                                             </div>
                                         @endif
                                     @elseif($item->activity_type === 'quiz')

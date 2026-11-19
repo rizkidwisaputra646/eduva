@@ -38,7 +38,12 @@ class AiTutorController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        // 1. Ambil hanya daftar kelas milik guru atau yang diikuti siswa
+        // Guru tidak menggunakan AI Tutor pendamping belajar siswa
+        if ($user->role !== 'siswa') {
+            return redirect()->route('dashboard')->with('error', 'Fitur AI Tutor dikhususkan untuk pendamping belajar siswa.');
+        }
+
+        // 1. Ambil hanya daftar kelas yang diikuti siswa
         $courses = $this->getAuthorizedCourses($user);
         $courseOptions = $courses->map(fn (Course $course) => [
             'id' => $course->id,
@@ -217,10 +222,10 @@ class AiTutorController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($user->role === 'admin') {
+        if ($user->role !== 'siswa') {
             return response()->json([
                 'success' => false,
-                'error' => 'Akses ditolak.',
+                'error' => 'Akses ditolak. Fitur AI Tutor hanya dapat digunakan oleh siswa.',
             ], 403);
         }
 
@@ -260,10 +265,10 @@ class AiTutorController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($user->role === 'admin') {
+        if ($user->role !== 'siswa') {
             return response()->json([
                 'success' => false,
-                'error' => 'Administrator tidak memiliki akses ke fitur AI Tutor siswa.',
+                'error' => 'Akses ditolak. Fitur AI Tutor hanya dapat digunakan oleh siswa.',
             ], 403);
         }
 
@@ -552,14 +557,12 @@ class AiTutorController extends Controller
     }
 
     /**
-     * Return only courses the current user owns (guru) or is enrolled in (siswa).
+     * Return only courses the current user is enrolled in (siswa only).
      */
     protected function getAuthorizedCourses(User $user): Collection
     {
-        if ($user->role === 'guru') {
-            return Course::where('teacher_id', $user->id)
-                ->orderBy('title')
-                ->get(['id', 'title', 'description', 'teacher_id']);
+        if ($user->role !== 'siswa') {
+            return collect();
         }
 
         return $user->enrolledCourses()
@@ -572,14 +575,8 @@ class AiTutorController extends Controller
      */
     protected function authorizeCourseAccess(User $user, int $courseId): ?Course
     {
-        if ($user->role === 'admin') {
+        if ($user->role !== 'siswa') {
             return null;
-        }
-
-        if ($user->role === 'guru') {
-            return Course::where('id', $courseId)
-                ->where('teacher_id', $user->id)
-                ->first();
         }
 
         return Course::where('id', $courseId)

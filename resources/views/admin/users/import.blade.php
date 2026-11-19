@@ -54,6 +54,10 @@
                                 <span class="font-mono font-bold text-primary shrink-0">email</span>
                                 <div>Alamat email pengguna (opsional).</div>
                             </div>
+                            <div class="flex items-start gap-2.5 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                <span class="font-mono font-bold text-primary shrink-0">kelas</span>
+                                <div>Opsional (khusus siswa). Nama kelas rombel yang terdaftar di sistem (contoh: <code class="font-semibold text-gray-900">12 IPA A</code>). Siswa akan otomatis ditempatkan ke kelas tersebut.</div>
+                            </div>
                         </div>
 
                         <!-- Info Password Otomatis -->
@@ -234,6 +238,7 @@
                                     <th class="py-2.5 px-4">Nomor Identitas (NIM/NIP)</th>
                                     <th class="py-2.5 px-4">Peran Akun</th>
                                     <th class="py-2.5 px-4">Email</th>
+                                    <th class="py-2.5 px-4">Kelas Tujuan</th>
                                     <th class="py-2.5 px-4 text-right">Status</th>
                                 </tr>
                             </thead>
@@ -249,6 +254,15 @@
                                             </span>
                                         </td>
                                         <td class="py-2.5 px-4 text-gray-500">{{ $valid['email'] ?? '-' }}</td>
+                                        <td class="py-2.5 px-4">
+                                            @if(!empty($valid['class_name']))
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                    {{ $valid['class_name'] }}
+                                                </span>
+                                            @else
+                                                <span class="text-gray-400 italic text-[11px]">Belum ditentukan</span>
+                                            @endif
+                                        </td>
                                         <td class="py-2.5 px-4 text-right">
                                             <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>

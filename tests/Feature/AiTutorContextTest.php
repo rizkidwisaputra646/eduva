@@ -486,5 +486,38 @@ class AiTutorContextTest extends TestCase
         $this->assertStringContainsString('BELUM TERSEDIA dalam bentuk teks', $secondSystemPrompt);
         $this->assertStringContainsString('JANGAN mengarang isinya', $secondSystemPrompt);
     }
+
+    public function test_teacher_and_admin_cannot_access_ai_tutor(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'identity_number' => '197001011990011001',
+            'is_active' => true,
+        ]);
+
+        // 1. Guru diarahkan ke dashboard
+        $teacherRes = $this->actingAs($this->teacher)->get(route('ai-tutor.index'));
+        $teacherRes->assertRedirect(route('dashboard'));
+        $teacherRes->assertSessionHas('error');
+
+        // Guru tidak bisa mengirim pesan chat
+        $teacherChatRes = $this->actingAs($this->teacher)->postJson(route('ai-tutor.chat'), [
+            'message' => 'Halo tutor',
+        ]);
+        $teacherChatRes->assertStatus(403);
+
+        // Guru tidak bisa mengambil daftar meetings AI
+        $teacherMeetingRes = $this->actingAs($this->teacher)->getJson(route('ai-tutor.courses.meetings', 1));
+        $teacherMeetingRes->assertStatus(403);
+
+        // 2. Admin diarahkan ke admin dashboard
+        $adminRes = $this->actingAs($admin)->get(route('ai-tutor.index'));
+        $adminRes->assertRedirect(route('admin.dashboard'));
+
+        $adminChatRes = $this->actingAs($admin)->postJson(route('ai-tutor.chat'), [
+            'message' => 'Halo tutor',
+        ]);
+        $adminChatRes->assertStatus(403);
+    }
 }
 

@@ -11,6 +11,16 @@ use Illuminate\Validation\Rules\Password;
 class PasswordController extends Controller
 {
     /**
+     * Display the change password view.
+     */
+    public function edit(Request $request)
+    {
+        return view('auth.change-password', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
      * Update the user's password.
      */
     public function update(Request $request): RedirectResponse
@@ -19,7 +29,9 @@ class PasswordController extends Controller
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ], [
+            'current_password.required' => 'Password lama saat ini wajib diisi.',
             'current_password.current_password' => 'Password lama yang Anda masukkan tidak sesuai.',
+            'password.required' => 'Password baru wajib diisi.',
             'password.confirmed' => 'Konfirmasi password baru tidak cocok.',
             'password.min' => 'Password baru minimal harus terdiri dari 8 karakter.',
         ]);
@@ -29,7 +41,10 @@ class PasswordController extends Controller
             'must_change_password' => false,
         ]);
 
-        \App\Models\ActivityLog::record('auth.password_change', "Pengguna {$request->user()->name} ({$request->user()->identity_number}) berhasil memperbarui password.");
+        \App\Models\ActivityLog::record(
+            'auth.password_change',
+            "Pengguna {$request->user()->name} ({$request->user()->identity_number}) role {$request->user()->role} berhasil memperbarui password."
+        );
 
         return back()
             ->with('status', 'password-updated')

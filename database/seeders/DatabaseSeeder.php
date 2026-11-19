@@ -74,5 +74,59 @@ class DatabaseSeeder extends Seeder
             ['key' => 'allow_student_leave_course'],
             ['value' => '1', 'type' => 'boolean', 'description' => 'Izinkan siswa keluar dari kelas secara mandiri']
         );
+
+        // Tahun Ajaran Default
+        $academicYear = \App\Models\AcademicYear::firstOrCreate(
+            ['name' => '2026/2027', 'semester' => 'Ganjil'],
+            [
+                'is_active' => true,
+                'status' => 'active',
+                'start_date' => '2026-07-15',
+                'end_date' => '2026-12-20',
+            ]
+        );
+
+        // Kelas Rombel Contoh
+        $guru = User::where('identity_number', '198501012010011001')->first();
+        $class1 = \App\Models\SchoolClass::firstOrCreate(
+            ['name' => '12 IPA A', 'academic_year_id' => $academicYear->id],
+            [
+                'level' => '12',
+                'department' => 'IPA',
+                'homeroom_teacher_id' => $guru?->id,
+                'status' => 'active',
+            ]
+        );
+
+        \App\Models\SchoolClass::firstOrCreate(
+            ['name' => '12 IPA C', 'academic_year_id' => $academicYear->id],
+            [
+                'level' => '12',
+                'department' => 'IPA',
+                'status' => 'active',
+            ]
+        );
+
+        \App\Models\SchoolClass::firstOrCreate(
+            ['name' => '10 IPS A', 'academic_year_id' => $academicYear->id],
+            [
+                'level' => '10',
+                'department' => 'IPS',
+                'status' => 'active',
+            ]
+        );
+
+        // Penempatan Siswa Contoh jika belum ditempatkan
+        $siswa = User::where('identity_number', '202401001')->first();
+        if ($siswa && $class1 && !$siswa->activeClassHistory()->exists()) {
+            \App\Models\StudentClassHistory::create([
+                'user_id' => $siswa->id,
+                'school_class_id' => $class1->id,
+                'academic_year_id' => $academicYear->id,
+                'status' => 'active',
+                'assigned_at' => now(),
+                'notes' => 'Penempatan awal tahun ajaran baru',
+            ]);
+        }
     }
 }

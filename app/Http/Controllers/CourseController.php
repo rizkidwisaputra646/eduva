@@ -171,8 +171,12 @@ class CourseController extends Controller
     public function show(Course $course)
     {
         $user = Auth::user();
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.courses.show', $course->id);
+        }
+
         $userId = $user->id;
-        $isTeacher = $user->role === 'guru' || $user->role === 'admin';
+        $isTeacher = $user->role === 'guru';
 
         // Validasi keamanan akses: jika siswa tidak terdaftar di kelas, tolak akses langsung
         if ($user->role === 'siswa' && !$course->students()->where('course_user.user_id', $userId)->exists()) {

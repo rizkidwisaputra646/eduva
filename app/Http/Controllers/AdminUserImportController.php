@@ -47,11 +47,11 @@ class AdminUserImportController extends Controller
             return response()->stream(function () {
                 $handle = fopen('php://output', 'w');
                 fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-                fputcsv($handle, ['nama', 'nomor_identitas', 'peran', 'email']);
-                fputcsv($handle, ['Ahmad Dahlan', '202401010', 'siswa', 'ahmad@sekolah.sch.id']);
-                fputcsv($handle, ['Siti Aminah', '202401011', 'siswa', 'siti@sekolah.sch.id']);
-                fputcsv($handle, ['Dr. Budi Utomo, M.Kom', '198205122010011002', 'guru', 'budi.utomo@sekolah.sch.id']);
-                fputcsv($handle, ['Dewi Sartika, S.Pd', '198708202014022003', 'guru', 'dewi.sartika@sekolah.sch.id']);
+                fputcsv($handle, ['nama', 'nomor_identitas', 'peran', 'email', 'kelas']);
+                fputcsv($handle, ['Andi Saputra', '202401010', 'siswa', 'andi@sekolah.sch.id', '12 IPA A']);
+                fputcsv($handle, ['Siti Aminah', '202401011', 'siswa', 'siti@sekolah.sch.id', '12 IPA C']);
+                fputcsv($handle, ['Budi Pratama', '202401012', 'siswa', 'budi.p@sekolah.sch.id', '10 IPS A']);
+                fputcsv($handle, ['Dewi Sartika, S.Pd', '198708202014022003', 'guru', 'dewi.sartika@sekolah.sch.id', '']);
                 fclose($handle);
             }, 200, $headers);
         }
@@ -108,6 +108,7 @@ class AdminUserImportController extends Controller
                 'role', 'peran', 'jabatan', 'jenis akun', 'jenis_akun' => 'peran',
                 'name', 'nama_lengkap', 'nama', 'nama lengkap' => 'nama',
                 'email', 'surel', 'e-mail' => 'email',
+                'kelas', 'class', 'rombel', 'nama_kelas', 'nama kelas' => 'kelas',
                 default => $h
             };
         }, $header);
@@ -116,6 +117,7 @@ class AdminUserImportController extends Controller
         $identIndex = array_search('nomor_identitas', $normalizedHeader);
         $roleIndex = array_search('peran', $normalizedHeader);
         $emailIndex = array_search('email', $normalizedHeader);
+        $classIndex = array_search('kelas', $normalizedHeader);
 
         if ($nameIndex === false || $identIndex === false || $roleIndex === false) {
             return back()->with('error', 'Header berkas tidak sesuai. Pastikan ada kolom "nama", "nomor_identitas", dan "peran".');
@@ -142,6 +144,9 @@ class AdminUserImportController extends Controller
             $rawRole = strtolower(trim((string)($data[$roleIndex] ?? '')));
             $email = ($emailIndex !== false && isset($data[$emailIndex])) ? trim((string)$data[$emailIndex]) : null;
             if ($email === '') $email = null;
+
+            $className = ($classIndex !== false && isset($data[$classIndex])) ? trim((string)$data[$classIndex]) : null;
+            if ($className === '') $className = null;
 
             // Normalisasi peran
             $role = match ($rawRole) {
@@ -175,6 +180,19 @@ class AdminUserImportController extends Controller
                 $errors[] = "Peran '{$rawRole}' tidak valid. Harus 'siswa' atau 'guru'.";
             }
 
+            // Validasi Kelas (Opsional)
+            $targetClass = null;
+            if ($className) {
+                if ($role === 'guru') {
+                    $errors[] = "Guru tidak dapat ditempatkan pada kelas siswa.";
+                } else {
+                    $targetClass = \App\Models\SchoolClass::where('name', $className)->where('status', 'active')->first();
+                    if (!$targetClass) {
+                        $errors[] = "Kelas '{$className}' tidak ditemukan di sistem. Harap daftarkan kelas terlebih dahulu.";
+                    }
+                }
+            }
+
             // Validasi Email (opsional)
             if ($email) {
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -194,6 +212,9 @@ class AdminUserImportController extends Controller
                 'identity_number' => $ident,
                 'role' => $role ?? $rawRole,
                 'email' => $email,
+                'class_name' => $className,
+                'school_class_id' => $targetClass?->id,
+                'academic_year_id' => $targetClass?->academic_year_id,
             ];
 
             if (empty($errors)) {
@@ -239,7 +260,7 @@ class AdminUserImportController extends Controller
         DB::beginTransaction();
         try {
             foreach ($previewData['valid_rows'] as $row) {
-                User::create([
+                $user = User::create([
                     'name' => $row['name'],
                     'identity_number' => $row['identity_number'],
                     'role' => $row['role'],
@@ -248,6 +269,18 @@ class AdminUserImportController extends Controller
                     'must_change_password' => true,
                     'is_active' => true,
                 ]);
+
+                // Hubungkan penempatan kelas jika ada
+                if ($row['role'] === 'siswa' && !empty($row['school_class_id'])) {
+                    \App\Models\StudentClassHistory::create([
+                        'user_id' => $user->id,
+                        'school_class_id' => $row['school_class_id'],
+                        'academic_year_id' => $row['academic_year_id'],
+                        'status' => 'active',
+                        'assigned_at' => now(),
+                        'notes' => 'Penempatan otomatis dari Import Pengguna massal',
+                    ]);
+                }
 
                 $importedCount++;
                 if ($row['role'] === 'siswa') $studentCount++;

@@ -13,6 +13,8 @@ class Course extends Model
         'title',
         'description',
         'teacher_id',
+        'school_class_id',
+        'academic_year_id',
         'invitation_code',
         'is_active',
     ];
@@ -20,6 +22,16 @@ class Course extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function schoolClass()
+    {
+        return $this->belongsTo(SchoolClass::class);
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
+    }
 
     public function teacher()
     {

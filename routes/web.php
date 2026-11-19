@@ -116,6 +116,66 @@ Route::middleware('auth')->group(function () {
         // 7. Pengaturan Sistem
         Route::get('/settings', [\App\Http\Controllers\AdminSettingController::class, 'index'])->name('settings');
         Route::post('/settings', [\App\Http\Controllers\AdminSettingController::class, 'update'])->name('settings.update');
+
+        // 8. Manajemen Akademik Admin
+        Route::prefix('academic')->name('academic.')->group(function () {
+            // Tahun Ajaran
+            Route::get('/years', [\App\Http\Controllers\AdminAcademicYearController::class, 'index'])->name('years.index');
+            Route::post('/years', [\App\Http\Controllers\AdminAcademicYearController::class, 'store'])->name('years.store');
+            Route::put('/years/{year}', [\App\Http\Controllers\AdminAcademicYearController::class, 'update'])->name('years.update');
+            Route::patch('/years/{year}/set-active', [\App\Http\Controllers\AdminAcademicYearController::class, 'setActive'])->name('years.set-active');
+            Route::patch('/years/{year}/archive', [\App\Http\Controllers\AdminAcademicYearController::class, 'archive'])->name('years.archive');
+            Route::delete('/years/{year}', [\App\Http\Controllers\AdminAcademicYearController::class, 'destroy'])->name('years.destroy');
+
+            // Manajemen Kelas Rombel
+            Route::get('/classes', [\App\Http\Controllers\AdminSchoolClassController::class, 'index'])->name('classes.index');
+            Route::post('/classes', [\App\Http\Controllers\AdminSchoolClassController::class, 'store'])->name('classes.store');
+            Route::get('/classes/{schoolClass}', [\App\Http\Controllers\AdminSchoolClassController::class, 'show'])->name('classes.show');
+            Route::put('/classes/{schoolClass}', [\App\Http\Controllers\AdminSchoolClassController::class, 'update'])->name('classes.update');
+            Route::patch('/classes/{schoolClass}/archive', [\App\Http\Controllers\AdminSchoolClassController::class, 'archive'])->name('classes.archive');
+            Route::delete('/classes/{schoolClass}', [\App\Http\Controllers\AdminSchoolClassController::class, 'destroy'])->name('classes.destroy');
+
+            // Penempatan Siswa
+            Route::post('/classes/{schoolClass}/students', [\App\Http\Controllers\AdminSchoolClassController::class, 'addStudents'])->name('classes.students.add');
+            Route::delete('/classes/{schoolClass}/students/{user}', [\App\Http\Controllers\AdminSchoolClassController::class, 'removeStudent'])->name('classes.students.remove');
+            Route::post('/classes/{schoolClass}/students/{user}/move', [\App\Http\Controllers\AdminSchoolClassController::class, 'moveStudent'])->name('classes.students.move');
+
+            // Daftar Siswa & Riwayat Penempatan
+            Route::get('/students', [\App\Http\Controllers\AdminStudentPlacementController::class, 'index'])->name('students.index');
+
+            // Monitoring Akademik Global
+            Route::get('/monitoring', [\App\Http\Controllers\AdminAcademicMonitoringController::class, 'index'])->name('monitoring.index');
+        });
+    });
+
+    // Rekapitulasi Akademik Guru
+    Route::prefix('academic')->name('teacher.academic.')->group(function () {
+        // 1. Absensi Terintegrasi
+        Route::get('/attendance', [\App\Http\Controllers\TeacherAttendanceController::class, 'index'])->name('attendance.index');
+        Route::get('/attendance/create', [\App\Http\Controllers\TeacherAttendanceController::class, 'create'])->name('attendance.create');
+        Route::post('/attendance', [\App\Http\Controllers\TeacherAttendanceController::class, 'store'])->name('attendance.store');
+        Route::get('/attendance/{attendance}/edit', [\App\Http\Controllers\TeacherAttendanceController::class, 'edit'])->name('attendance.edit');
+        Route::put('/attendance/{attendance}', [\App\Http\Controllers\TeacherAttendanceController::class, 'update'])->name('attendance.update');
+        Route::get('/attendance/recap', [\App\Http\Controllers\TeacherAttendanceController::class, 'recap'])->name('attendance.recap');
+        Route::get('/attendance/export', [\App\Http\Controllers\TeacherAttendanceController::class, 'export'])->name('attendance.export');
+
+        // 2. Rekap Nilai Siswa
+        Route::get('/grades', [\App\Http\Controllers\TeacherGradeRecapController::class, 'index'])->name('grades.index');
+        Route::post('/grades/update-score', [\App\Http\Controllers\TeacherGradeRecapController::class, 'updateScore'])->name('grades.update-score');
+        Route::get('/grades/export', [\App\Http\Controllers\TeacherGradeRecapController::class, 'export'])->name('grades.export');
+
+        // 3. Rekap Tugas
+        Route::get('/assignments', [\App\Http\Controllers\TeacherAssignmentRecapController::class, 'index'])->name('assignments.index');
+        Route::get('/assignments/export', [\App\Http\Controllers\TeacherAssignmentRecapController::class, 'export'])->name('assignments.export');
+
+        // 4. Rekap Ujian
+        Route::get('/exams', [\App\Http\Controllers\TeacherExamRecapController::class, 'index'])->name('exams.index');
+        Route::get('/exams/export', [\App\Http\Controllers\TeacherExamRecapController::class, 'export'])->name('exams.export');
+
+        // 5. Laporan Akademik Siswa
+        Route::get('/reports', [\App\Http\Controllers\TeacherAcademicReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/student/{user}', [\App\Http\Controllers\TeacherAcademicReportController::class, 'studentDetail'])->name('reports.student');
+        Route::get('/reports/export', [\App\Http\Controllers\TeacherAcademicReportController::class, 'export'])->name('reports.export');
     });
 
     // Ujian / Pengerjaan Kuis & Monitoring Anti-Cheating

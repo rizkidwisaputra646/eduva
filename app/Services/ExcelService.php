@@ -152,12 +152,12 @@ class ExcelService
      */
     public function generateTemplateXlsx(string $outputPath): bool
     {
-        $headers = ['nama', 'nomor_identitas', 'peran', 'email'];
+        $headers = ['nama', 'nomor_identitas', 'peran', 'email', 'kelas'];
         $sampleData = [
-            ['Ahmad Dahlan', '202401010', 'siswa', 'ahmad@sekolah.sch.id'],
-            ['Siti Aminah', '202401011', 'siswa', 'siti@sekolah.sch.id'],
-            ['Dr. Budi Utomo, M.Kom', '198205122010011002', 'guru', 'budi.utomo@sekolah.sch.id'],
-            ['Dewi Sartika, S.Pd', '198708202014022003', 'guru', 'dewi.sartika@sekolah.sch.id'],
+            ['Andi Saputra', '202401010', 'siswa', 'andi@sekolah.sch.id', '12 IPA A'],
+            ['Siti Aminah', '202401011', 'siswa', 'siti@sekolah.sch.id', '12 IPA C'],
+            ['Budi Pratama', '202401012', 'siswa', 'budi.p@sekolah.sch.id', '10 IPS A'],
+            ['Dewi Sartika, S.Pd', '198708202014022003', 'guru', 'dewi.sartika@sekolah.sch.id', ''],
         ];
 
         return $this->createXlsx($headers, $sampleData, $outputPath);

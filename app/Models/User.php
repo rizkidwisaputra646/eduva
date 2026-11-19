@@ -62,6 +62,16 @@ class User extends Authenticatable
         };
     }
 
+    public function getNimAttribute(): ?string
+    {
+        return $this->identity_number;
+    }
+
+    public function getNipAttribute(): ?string
+    {
+        return $this->identity_number;
+    }
+
     public function enrolledCourses()
     {
         return $this->belongsToMany(Course::class, 'course_user', 'user_id', 'course_id');
@@ -75,5 +85,37 @@ class User extends Authenticatable
     public function examLogs()
     {
         return $this->hasMany(ExamLog::class);
+    }
+
+    public function classHistories()
+    {
+        return $this->hasMany(StudentClassHistory::class);
+    }
+
+    public function activeClassHistory()
+    {
+        return $this->hasOne(StudentClassHistory::class)->where('status', 'active');
+    }
+
+    public function activeClass()
+    {
+        return $this->hasOneThrough(
+            SchoolClass::class,
+            StudentClassHistory::class,
+            'user_id',
+            'id',
+            'id',
+            'school_class_id'
+        )->where('student_class_histories.status', 'active');
+    }
+
+    public function teacherAssignments()
+    {
+        return $this->hasMany(TeacherClassAssignment::class, 'teacher_id');
+    }
+
+    public function homeroomClasses()
+    {
+        return $this->hasMany(SchoolClass::class, 'homeroom_teacher_id');
     }
 }

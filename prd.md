@@ -1,232 +1,239 @@
 # Product Requirement Document (PRD) — LMS EDUVA
 
-> **Versi Dokumen:** 2.0  
-> **Status Proyek:** Aktif / Tahap Pengembangan Berkelanjutan  
-> **Target Pengguna:** Administrator Institusi, Guru / Dosen, Siswa / Mahasiswa  
-> **Stack Utama:** Laravel 12 (PHP 8.2+), Blade, Tailwind CSS, Alpine.js, Vite, Google Gemini API
+> **Versi Dokumen:** 3.0 (Edisi Akademik Terpadu & Rekapitulasi Guru)  
+> **Status Proyek:** Aktif / Siap Produksi & Teruji Otomatis (91 Tests, 531 Assertions)  
+> **Target Pengguna:** Administrator Institusi, Tenaga Pengajar (Guru), Siswa (Murid)  
+> **Stack Utama:** Laravel 12 (PHP 8.2+), Blade, Tailwind CSS, Alpine.js, Vite, Google Gemini API, Native Excel/Document Services
 
 ---
 
 ## 1. Pendahuluan & Visi Produk
 
 ### 1.1 Latar Belakang & Visi
-**EDUVA** adalah sistem manajemen pembelajaran (*Learning Management System* / LMS) modern, terintegrasi, dan berbasis kecerdasan buatan (*AI-powered*) yang dirancang untuk memberikan pengalaman belajar-mengajar yang bersih, efisien, dan fokus pada materi tanpa distraksi visual (*anti-AI slop*).
+**EDUVA** adalah sistem manajemen pembelajaran (*Learning Management System* / LMS) modern, terintegrasi, dan berbasis kecerdasan buatan (*AI-powered*) yang dirancang khusus untuk institusi pendidikan (sekolah menengah dan perguruan tinggi). 
 
-Sistem ini menggabungkan manajemen kelas terstruktur, evaluasi komprehensif (kuis dengan pengawasan anti-cheat dan penugasan mandiri), presensi otomatis, generator soal cerdas dari dokumen pembelajaran, serta **AI Tutor** yang mampu mendampingi siswa secara kontekstual sesuai materi dan pertemuan yang sedang dipelajari.
+Visi utama EDUVA adalah menghadirkan sistem akademik yang berorientasi pada kemudahan guru dan fokus belajar siswa dengan antarmuka yang bersih, fungsional, dan menolak ornamen visual berlebihan (*anti-AI slop*).
+
+Sistem ini mengintegrasikan dua pilar utama pendidikan:
+1. **Pilar Manajerial Akademik (Administrator):** Pengelolaan tahun ajaran berkesinambungan, rombongan belajar (rombel kelas), penempatan dan mutasi siswa antar-kelas dengan pencatatan riwayat transparan, integrasi import massal data pengguna sekaligus rombel, serta monitoring kesehatan akademik institusi.
+2. **Pilar Pembelajaran & Rekapitulasi (Guru & Siswa):** Pengelolaan mata pelajaran dan alur pertemuan, generator soal otomatis via AI (Google Gemini), evaluasi daring berpengawas anti-cheat (*tab-switch monitoring*), presensi terpadu dengan matriks kehadiran (P1..Pn), kalkulasi nilai akhir berbobot transparan, rekap pengumpulan tugas, analisis sebaran nilai ujian, laporan rapor akademik 360° per siswa, ekspor dokumen resmi (.xlsx native & PDF print), pendampingan belajar mandiri via **AI Tutor**, serta modul keamanan ganti kata sandi mandiri.
 
 ### 1.2 Tujuan Dokumen
-Dokumen ini disusun sebagai panduan teknis, fungsional, dan arsitektural resmi agar developer atau tim pengembang baru dapat langsung memahami arsitektur, alur logika, relasi database, standar UI/UX, dan melanjutkan pengembangan fitur tanpa merusak fungsi yang sudah berjalan.
+Dokumen PRD ini disusun sebagai acuan teknis, spesifikasi fungsional, dan arsitektural resmi bagi developer, pengembang lanjutan, atau auditor sistem agar dapat memahami struktur kode, relasi database, logika bisnis, hak akses peran (RBAC), serta melanjutkan pengembangan fitur tanpa merusak fungsionalitas yang telah berjalan.
 
 ---
 
 ## 2. Arsitektur Sistem & Spesifikasi Teknologi
 
 ```
-+--------------------------------------------------------------------------+
-|                             CLIENT BROWSER                               |
-|        (Blade Views + Alpine.js State + Tailwind CSS + Vite Assets)       |
-+------------------------------------+-------------------------------------+
-                                     | HTTP / AJAX / Fetch
-                                     v
-+--------------------------------------------------------------------------+
-|                         LARAVEL 12 BACKEND CORE                          |
-|  - Routing & Middleware (Auth, Role-Based Access Control)                |
-|  - Controllers (Kelas, Materi, Kuis, Presensi, AI Tutor, Admin)          |
-|  - Domain Services (DocumentTextExtractor, GeminiService, QuizGenerator) |
-|  - Eloquent ORM + Database Transactions                                  |
-+-------------------+--------------------+-------------------+-------------+
-                    |                    |                   |
-                    v                    v                   v
-            +---------------+    +---------------+   +-------------------+
-            | SQLite/MySQL  |    | Public Disk   |   | Google Gemini API |
-            |  Database     |    | File Storage  |   | (LLM Engine)      |
-            +---------------+    +---------------+   +-------------------+
++----------------------------------------------------------------------------------+
+|                                  CLIENT BROWSER                                  |
+|        (Blade Views + Alpine.js Reactive State + Tailwind CSS + Vite Assets)     |
++----------------------------------------+-----------------------------------------+
+                                         | HTTP / HTTPS / AJAX / JSON API
+                                         v
++----------------------------------------------------------------------------------+
+|                             LARAVEL 12 BACKEND CORE                              |
+|  - Routing & Middleware (Auth, Role-Based Access Control, Supervisory Redirect)  |
+|  - Controllers:                                                                  |
+|      * Admin (Users, Classes, Placement, Academic Years, Import, Security, Logs) |
+|      * Teacher (Courses, Meetings, Quizzes, Attendance, Grades, Reports, Exams)  |
+|      * Student (Dashboard, Learning Outline, Quiz Attempt, AI Tutor)             |
+|      * Shared (Profile, Change Password, Authentication)                         |
+|  - Domain Services:                                                              |
+|      * ExcelService (Native OpenXML/Zip Spreadsheet Generator & CSV Parser)      |
+|      * GeminiService (Google Gemini API with multi-model fallback)               |
+|      * AiQuestionGeneratorService & WordQuestionService                          |
+|      * DocumentTextExtractor (PDF, DOCX, PPTX, TXT)                              |
+|  - Eloquent ORM + Database Transactions                                          |
++--------------------+---------------------------+-------------------+-------------+
+                     |                           |                   |
+                     v                           v                   v
+             +---------------+           +---------------+   +-------------------+
+             | SQLite/MySQL  |           | Public Disk   |   | Google Gemini API |
+             | Database Core |           | File Storage  |   | (LLM Engine)      |
+             +---------------+           +---------------+   +-------------------+
 ```
 
 ### 2.1 Spesifikasi Stack Teknologi
-- **Backend:** PHP `^8.2`, Laravel `^12.0` (Breeze Authentication, Eloquent ORM, DB Transactions).
-- **Frontend:** Laravel Blade, Alpine.js `^3.4.2` (declarative UI & reactive state), Tailwind CSS `^3.1.0` (utility styling & typography tokens), Vite `^7.0.7`.
-- **Parsing Dokumen:**
-  - `smalot/pdfparser` (ekstraksi teks dokumen PDF).
-  - `phpoffice/phpword` `1.3` (ekstraksi & pembacaan modul/dokumen DOCX).
-  - Native ZIP / XML Parser bawaan PHP (ekstraksi teks slide PPTX & DOC).
-- **Layanan AI:** Google Gemini API (`gemini-flash-lite-latest`, `gemini-3.1-flash-lite-preview`, `gemini-flash-latest`, `gemini-3-flash-preview`) dengan fallback model otomatis.
-- **Penyimpanan:** Local Disk Storage (`storage/app/public` di-symlink ke `public/storage`).
-- **Database:** SQLite (default development) atau MySQL/MariaDB/PostgreSQL (production-ready).
-- **Pengujian:** PHPUnit `^11.5`, Laravel Feature & Unit Test Suite.
+- **Backend:** PHP `^8.2`, Laravel `^12.0` (Breeze Authentication, Eloquent ORM, Database Transactions).
+- **Frontend:** Laravel Blade Templating, Alpine.js `^3.4.2` (deklaratif, modal state, dynamic forms, live criteria indicators), Tailwind CSS `^3.1.0` (utility styling & typography tokens), Vite `^7.0.7`.
+- **Manipulasi & Parsing Spreadsheet/Dokumen:**
+  - `App\Services\ExcelService`: Pembangkit file `.xlsx` berbasis XML/Zip native berkinerja tinggi tanpa dependensi library berat, serta pembaca format `.csv` & `.xlsx`.
+  - `smalot/pdfparser`: Ekstraksi teks dokumen PDF untuk bahan soal AI.
+  - `phpoffice/phpword` `1.3`: Parser soal berbasis berkas template Microsoft Word (.docx).
+  - Native ZIP / XML Parser PHP: Ekstraksi teks presentasi Microsoft PowerPoint (.pptx).
+- **Layanan Kecerdasan Buatan (AI):** Google Gemini API (`gemini-flash-lite-latest`, `gemini-3.1-flash-lite-preview`, `gemini-flash-latest`, `gemini-3-flash-preview`) dengan sistem *graceful model fallback*.
+- **Penyimpanan:** Local Disk Storage (`storage/app/public` terhubung via symlink ke `public/storage`).
+- **Database:** SQLite (development/testing) atau MySQL/MariaDB/PostgreSQL (production).
+- **Pengujian Mutu (QA):** PHPUnit `^11.5` dengan 91 automated feature tests (531 assertions) lulus 100%.
 
 ---
 
 ## 3. Peran Pengguna & Hak Akses (User Roles & RBAC)
 
-Sistem menggunakan 3 peran (*roles*) dengan hak akses terisolasi:
+Sistem membagi pengguna ke dalam 3 peran (*role*) terisolasi:
 
-| Modul / Fitur | Administrator (`admin`) | Guru (`guru`) | Siswa (`siswa`) |
+| Modul / Kemampuan Sistem | Administrator (`admin`) | Guru (`guru`) | Siswa (`siswa`) |
 | :--- | :---: | :---: | :---: |
-| **Pusat Admin (Dashboard, User, Import, Audit Log, Settings)** | Full Access | Ditolak (403) | Ditolak (403) |
-| **Buat / Edit / Hapus Kelas** | Ya | Ya (Milik Sendiri) | Ditolak (403) |
-| **Gabung Kelas (Join via Kode) / Keluar Kelas** | Ditolak | Ditolak | Ya |
-| **Kelola Pertemuan & Tambah Aktivitas** | Ya | Ya (Milik Sendiri) | Ditolak (403) |
-| **Hapus Pertemuan Beserta Seluruh Aktivitas** | Ya | Ya (Milik Sendiri) | Ditolak (403) |
-| **Unggah Berkas Materi / Halaman / Video** | Ya | Ya | Hanya Baca |
-| **Buat Kuis, Soal, & AI Question Generator** | Ya | Ya | Ditolak (403) |
-| **Kerjakan Ujian / Kuis Online (Anti-Cheat)** | Ditolak | Ditolak | Ya |
-| **Kumpulkan Tugas (Assignment Submission)** | Ditolak | Ditolak | Ya |
-| **Penilaian & Pemberian Nilai Tugas / Ujian** | Ya | Ya (Kelas Sendiri) | Ditolak (403) |
-| **Buka / Tutup Sesi Presensi & Rekap Kehadiran** | Ya | Ya | Hanya Isi Presensi |
-| **AI Tutor Interaktif Berkonteks** | Ditolak | Ditolak | Ya (Kelas yang Diikuti) |
+| **Pusat Administrator (Users, Security, Logs, Settings)** | Penuh | Ditolak (403) | Ditolak (403) |
+| **Manajemen Tahun Ajaran & Rombel Kelas Sekolah** | Penuh | Ditolak (403) | Ditolak (403) |
+| **Penempatan & Mutasi Siswa Antar-Kelas** | Penuh | Ditolak (403) | Ditolak (403) |
+| **Monitoring Akademik Global Sekolah** | Penuh | Ditolak (403) | Ditolak (403) |
+| **Import Massal Pengguna + Penempatan Kelas** | Penuh | Ditolak (403) | Ditolak (403) |
+| **Supervisi Mata Pelajaran (`/kelas/{id}`)** | Dialihkan ke Supervisi | Penuh (Milik Sendiri) | Hanya Ikuti |
+| **Buat / Edit / Hapus Mata Pelajaran (Course)** | Supervisi | Penuh | Ditolak (403) |
+| **Kelola Pertemuan & Tambah Aktivitas Pembelajaran** | Supervisi | Penuh | Hanya Membaca |
+| **Hapus Pertemuan Beserta Seluruh Konten Terkait** | Supervisi | Penuh | Ditolak (403) |
+| **Absensi Terpadu, Roll-Call, & Matriks Rekap P1..Pn** | Supervisi | Penuh | Hanya Isi Presensi |
+| **Buku Rekap Nilai Siswa (Bobot Tugas + Ujian Transparan)**| Supervisi | Penuh | Ditolak (403) |
+| **Rekap Tugas & Penilaian Hasil Kerja Siswa** | Supervisi | Penuh | Hanya Mengumpulkan |
+| **Rekap Hasil Ujian & Sebaran Predikat (A–E)** | Supervisi | Penuh | Ditolak (403) |
+| **Laporan Profil 360° Perkembangan Akademik Siswa** | Supervisi | Penuh | Ditolak (403) |
+| **Ekspor Dokumen Resmi (.xlsx Native & PDF Print)** | Ya | Ya | Ditolak (403) |
+| **AI Question Generator & Import Soal Word** | Supervisi | Penuh | Ditolak (403) |
+| **Kerjakan Ujian Daring (Pengawasan Anti-Cheat)** | Ditolak | Ditolak | Ya |
+| **AI Tutor Interaktif Berkonteks Pertemuan** | Ditolak (Guard) | Ditolak (Guard) | Ya (Kelas Sendiri) |
+| **Ganti Kata Sandi Mandiri (`/ganti-password`)** | Ya | Ya | Ya |
 
 ### 3.1 Kredensial Default (Seeder Awal)
-Data default saat menjalankan `php artisan db:seed`:
+Database seeder (`php artisan db:seed`) menyiapkan akun standar:
 - **Admin:** `admin` / Password: `password` (Email: `admin@eduva.com`)
 - **Guru:** `198501012010011001` / Password: `password` (Email: `guru@eduva.com`)
 - **Siswa:** `202401001` / Password: `password` (Email: `siswa@eduva.com`)
-- **Password Default Pengguna Baru / Reset:** `eduva123@`
+- **Password Default Akun Baru / Reset Admin:** `eduva123@`
 
 ---
 
 ## 4. Modul Fungsional Utama
 
-### 4.1 Modul Autentikasi & Keamanan Akun
-- **Multi-Identifier Login:** Pengguna dapat masuk menggunakan Nomor Identitas (`identity_number`: NIP untuk guru, NIM/NIS untuk siswa, atau username `admin`) maupun alamat email.
-- **Kebijakan Ganti Password Pertama Kali:** Kolom `must_change_password` (boolean). Jika bernilai `true` (misal akun baru diimpor oleh admin), pengguna secara otomatis diarahkan ke halaman wajib ganti password sebelum dapat mengakses fitur lain.
-- **Manajemen Sesi:** Proteksi CSRF pada semua request POST/PUT/DELETE, session expired otomatis setelah durasi inaktif.
+### 4.1 Manajemen Autentikasi, Keamanan Akun & Fitur Ganti Password
+- **Multi-Identifier Login:** Pengguna dapat masuk menggunakan Nomor Identitas (`identity_number`: NIP untuk Guru, NIM untuk Siswa, atau username `admin`) maupun alamat email resmi.
+- **Halaman Khusus Ganti Password (`/ganti-password`):**
+  - Tampilan fokus, modern, dan bebas distraksi ([change-password.blade.php](file:///e:/pemrogramman%20web%202/eduva/resources/views/auth/change-password.blade.php)).
+  - Ringkasan profil akun: Nama, Peranan, NIP/NIM, dan Status Password.
+  - Fitur toggle intip kata sandi (*show/hide eye icon*) di setiap field input password lama, baru, dan konfirmasi.
+  - Indikator kecukupan karakter (minimal 8 karakter) dan kecocokan konfirmasi secara real-time via Alpine.js.
+  - Validasi aman: Memastikan password lama sesuai, password baru minimal 8 karakter, dan konfirmasi cocok.
+  - Otomatis mengubah flag `must_change_password` menjadi `false`.
+  - Rekam jejak audit keamanan dicatat ke `activity_logs` dengan aksi `auth.password_change`.
+- **Peringatan Password Sementara:**
+  - Banner peringatan dinamis pada Dashboard Guru dan Siswa jika akun terdeteksi masih menggunakan kata sandi default sistem (`eduva123@`).
+  - Shortcut langsung *Ganti Password* pada navigasi sidebar (section *Akun Saya*), tombol kartu profil pojok kiri bawah, dan kartu *Aksi Cepat* pada dashboard.
 
 ---
 
 ### 4.2 Pusat Administrator (Admin Management Center)
 Akses rute di bawah prefix `/admin`:
-1. **Admin Dashboard:** Ringkasan total pengguna (siswa/guru), total kelas aktif, aktivitas harian, dan antrean koreksi.
-2. **Manajemen Pengguna (`/admin/users`):** Tambah, edit, aktifkan/nonaktifkan akun, reset password ke default, dan hapus akun (dengan proteksi akun admin mandiri).
+1. **Admin Dashboard (`/admin/dashboard`):** Metrik ringkasan jumlah siswa, guru, kelas, pertumbuhan akun, status kesehatan keamanan, dan log peristiwa terkini.
+2. **Manajemen Pengguna (`/admin/users`):** Tambah akun, edit profil, toggle aktivasi akun, reset password ke default `eduva123@`, dan hapus pengguna dengan proteksi akun admin mandiri.
 3. **Import Pengguna Massal (`/admin/users/import`):**
-   - Mendukung format CSV dan Excel (.xlsx) dengan template resmi yang dapat diunduh.
-   - Dilengkapi tahap **Preview & Validasi Data** sebelum commit ke database (mencegah duplikasi email / NIP / NIM).
-4. **Monitoring Kelas (`/admin/courses`):** Pengawasan seluruh kelas, jumlah siswa, materi, dan toggle status aktif kelas.
-5. **Pusat Keamanan & Audit Log (`/admin/security` & `/admin/logs`):** Pencatatan log aktivitas sistem (`ActivityLog`), pelacakan IP address, reset kredensial, dan deaktivasi darurat.
-6. **Pengaturan Sistem (`/admin/settings`):** Pengaturan nama LMS, nama institusi, tahun akademik, semester, dan izin siswa keluar kelas secara mandiri.
+   - Mendukung format Excel (.xlsx) dan CSV dengan template standar resmi institusi.
+   - Kolom opsional `kelas` (contoh: `12 IPA A`). Jika diisi dan terdaftar di database, sistem secara otomatis menempatkan siswa ke rombel tersebut dalam transaksi database yang aman.
+   - Pratinjau (*preview*) data dan deteksi error validasi sebelum disimpan permanen ke database.
+4. **Monitoring Mata Pelajaran (`/admin/courses`):** Pengawasan seluruh mata pelajaran yang diampu guru, daftar siswa terdaftar, materi, dan toggle status aktif.
+5. **Keamanan Akun & Log Aktivitas (`/admin/security` & `/admin/logs`):** Pelacakan IP address, agen peramban, riwayat aksi administratif, serta tombol cepat reset kredensial.
+6. **Pengaturan Sistem (`/admin/settings`):** Konfigurasi global nama institusi, kebijakan pendaftaran, dan semester aktif.
 
 ---
 
-### 4.3 Manajemen Kelas & Forum Diskusi
-- **Daftar Kelas Guru:** Menampilkan kartu mata pelajaran yang diajar, jumlah siswa terdaftar, serta tombol cepat salin kode undangan (*invitation code*).
-- **Daftar Kelas Siswa:** Menampilkan mata pelajaran yang sedang diikuti dengan opsi keluar dari kelas (*leave course*) jika diizinkan sistem.
-- **Banner Mata Pelajaran:** Tampilan visual bersih dengan warna gradien terstruktur, kode kelas mono, dan deskripsi ringkas.
-- **Tab Navigasi Kelas:**
-  - **Forum (Stream):** Papan pengumuman guru, diskusi instruksional, dan postingan kelas.
-  - **Tugas Kelas (Classwork):** Alur pembelajaran utama per pertemuan.
-  - **Anggota (People):** Daftar pengajar dan siswa terdaftar dengan fitur pencopotan siswa oleh guru.
+### 4.3 Manajemen Akademik Administrator
+Akses rute di bawah prefix `/admin/academic`:
+1. **Pengelolaan Tahun Ajaran (`/admin/academic/years`):**
+   - Tambah, edit, aktifkan, dan arsipkan tahun ajaran (contoh: `2026/2027 Ganjil`).
+   - Mekanisme satu tahun ajaran aktif: Mengaktifkan satu tahun ajaran otomatis menonaktifkan tahun ajaran sebelumnya.
+   - Proteksi penghapusan: Tahun ajaran yang telah memiliki kelas rombel tidak dapat dihapus sembarangan.
+2. **Manajemen Kelas Rombel (`/admin/academic/classes`):**
+   - Pembuatan rombel sekolah (contoh: `12 IPA A`, `12 IPA C`, `10 IPS A`) dengan penentuan tingkat (10/11/12), jurusan (MIPA/IPS/Bahasa/Umum), tahun ajaran, dan penunjukan wali kelas (*homeroom teacher*).
+   - Halaman detail kelas (`show.blade.php`): Menampilkan daftar siswa aktif, jumlah siswa, mata pelajaran yang terhubung, dan riwayat mutasi.
+   - Fitur **Tambahkan Siswa**: Menampilkan daftar siswa yang belum memiliki rombel aktif pada tahun ajaran terkait untuk ditambahkan secara massal.
+   - Fitur **Pindahkan Siswa (Mutasi Kelas)**: Memindahkan siswa ke kelas tujuan dengan mencatat status lama sebagai `moved` beserta tanggal mutasi dan catatan alasan pemindahan tanpa menghapus riwayat akademik nilai siswa.
+   - Fitur **Keluarkan Siswa**: Mengeluarkan siswa dari rombel tanpa menghapus akun pengguna dari database.
+3. **Daftar Penempatan Siswa (`/admin/academic/students`):**
+   - Pemantauan menyeluruh status penempatan seluruh siswa sekolah.
+   - Filter cepat: Menampilkan siswa yang sudah memiliki kelas vs siswa yang belum memiliki kelas.
+4. **Monitoring Akademik Global (`/admin/academic/monitoring`):**
+   - Metrik statistik makro: Rerata persentase presensi seluruh sekolah, tingkat penyelesaian tugas, total sesi ujian, dan sebaran rombel.
 
 ---
 
-### 4.4 Alur Pembelajaran & Struktur Pertemuan (Course Outline)
-Struktur materi dalam kelas diorganisir menggunakan konsep **Topik / Pertemuan**.
-- **Grouping Dinamis:** Aktivitas pembelajaran (`Material`, `Quiz`, `Attendance`) dikelompokkan secara otomatis berdasarkan kolom `topic` (string).
-- **Accordion Alur Pembelajaran:**
-  - Tiap pertemuan dapat dibuka-tutup (*collapsible*).
-  - **Single Toggle Button:** Satu tombol terintegrasi (*Buka Semua* / *Tutup Semua*).
-  - **State Persistence:** Kondisi accordion yang terbuka/tertutup disimpan di `localStorage` per akun pengguna dan per kelas (`eduva_alur_accordion_u{userId}_c{courseId}`).
-  - Jika ada pertemuan baru, secara default ditampilkan tertutup tanpa mengganggu status pertemuan lain.
-- **Hapus Pertemuan:**
+### 4.4 Manajemen Kelas & Alur Pertemuan Pembelajaran (Course Outline)
+- **Struktur Berbasis Topik / Pertemuan:** Setiap materi, kuis, tugas, dan presensi dikelompokkan ke dalam satu string `topic` (contoh: *Pertemuan 01 — Pengantar Fisika Kuantum*).
+- **Accordion Alur Pembelajaran Persisten:**
+  - Tiap pertemuan dapat dibuka-tutup secara independen.
+  - Tombol tunggal *Buka Semua / Tutup Semua* dengan status tersimpan di `localStorage` per pengguna per kelas.
+- **Penghapusan Pertemuan Aman:**
   - Guru dapat menghapus keseluruhan pertemuan melalui modal konfirmasi `delete-meeting-modal`.
-  - Sistem mengeksekusi penghapusan menyeluruh dalam transaksi DB (`Material`, `Quiz`, `Attendance`, `Announcement`) serta menghapus file fisik di penyimpanan publik.
+  - Sistem menghapus seluruh aktivitas di dalam pertemuan tersebut secara transaksional (`Material`, `Quiz`, `Attendance`, `Announcement`) serta menghapus berkas fisik di storage.
 
 ---
 
 ### 4.5 Modal Tambah Aktivitas Terpadu (Unified Modal)
-Komponen modal penambahan aktivitas dirancang dengan standar UX profesional:
-1. **Struktur:** Header dengan judul dan tombol tutup, Content yang dapat di-scroll secara independen, dan Sticky Footer yang selalu terlihat di bagian bawah.
-2. **Selector Jenis Aktivitas:** Dropdown modern dengan 7 jenis aktivitas:
-   - `label`: Label / Pengantar sesi.
-   - `file`: Berkas materi (PDF, DOCX, PPTX, TXT, ZIP, RAR maks. 15MB).
-   - `page`: Artikel teks pembelajaran lengkap.
-   - `video`: Video YouTube dengan validasi tautan dan pemutar terintegrasi.
-   - `quiz`: Kuis atau ujian online.
-   - `assignment`: Tugas mandiri pengumpulan berkas.
-   - `attendance`: Sesi presensi kehadiran siswa.
-3. **Pilih Pertemuan (Searchable Dropdown):**
-   - Mengambil data pertemuan **nyata** dari database kelas yang aktif (tanpa data dummy/hardcode).
-   - Fitur pencarian real-time berdasarkan nomor pertemuan atau judul materi.
-   - Opsi membuat pertemuan baru langsung jika nama pertemuan belum ada.
-   - **Konteks Otomatis:** Jika guru mengklik tombol *"Tambah di Sini"* pada header accordion pertemuan tertentu, input pertemuan otomatis terkunci (*locked*) tanpa meminta guru memilih ulang.
-4. **Indonesian Date & Time Picker (`DD/MM/YYYY` + `HH:MM`):**
-   - Pemilih tanggal dan jam kustom berbasis Alpine.js dengan kalender popover (format standar Indonesia `DD/MM/YYYY`).
-   - Pemilih jam dengan slot waktu cepat dan validasi bahwa waktu selesai/deadline tidak boleh lebih awal dari waktu mulai.
+Modal modern dengan komposisi 3 bagian (Header, Content scrollable, Sticky Footer):
+1. **Selector 7 Jenis Aktivitas:** `label`, `file`, `page`, `video`, `quiz`, `assignment`, dan `attendance`.
+2. **Searchable Dropdown Pertemuan Riil:**
+   - Menampilkan daftar pertemuan riil yang sudah ada di database kelas.
+   - Fitur pencarian cepat dan opsi membuat pertemuan baru langsung.
+   - Jika modal dibuka dari tombol pertemuan tertentu, nilai pertemuan otomatis terkunci (*auto-context locked*).
+3. **Date & Time Picker Standar Indonesia (`DD/MM/YYYY` + `HH:MM`):**
+   - Antarmuka kalender popover Alpine.js dengan validasi logis (waktu selesai tidak boleh lebih awal dari waktu mulai).
 
 ---
 
-### 4.6 Kuis, Ujian Online & Pengawasan Anti-Cheating
-- **Pengaturan Waktu Fleksibel:** Durasi ujian dalam jam dan menit (misal: 1 Jam 30 Menit = 90 Menit) dengan tombol pilihan cepat (*preset chips*).
-- **Jadwal Akses:** Waktu mulai akses dan batas akhir pengerjaan (*deadline*).
-- **Anti-Cheating Monitor (`detect_tab_switch`):**
-  - Jika diaktifkan, JavaScript pada halaman ujian memantau saat siswa berpindah tab browser, membuka window lain, atau meminimalkan browser.
-  - Setiap pelanggaran dicatat ke tabel `exam_logs` secara real-time via AJAX endpoint `/kuis/{quiz}/log-event`.
-- **Exam Session Server Sync:**
-  - Saat siswa mulai ujian, record dibuat di `exam_sessions`.
-  - Waktu berakhir (*expires_at*) dihitung di server. Jika halaman direfresh atau browser ditutup, sisa waktu tetap berjalan sesuai jam server.
-  - Saat waktu habis, sistem melakukan submit otomatis (*auto-submit*).
-- **Koreksi & Buku Nilai:** Kuis pilihan ganda dikoreksi otomatis; esai dapat dinilai secara manual oleh guru pada lembar koreksi ujian.
+### 4.6 Rekapitulasi Akademik Guru
+Akses rute di bawah prefix `/academic`:
+1. **Absensi & Presensi Siswa (`/academic/attendance`):**
+   - Pembuatan sesi presensi pertemuan dengan opsi *auto-populate* kehadiran default.
+   - Formulir roll-call interaktif: Radio button status Hadir, Izin, Sakit, Alpa (H/I/S/A) per siswa disertai catatan keterangan guru.
+   - **Matriks Rekapitulasi Kehadiran (`/academic/attendance/recap`):** Menampilkan tabel matriks seluruh pertemuan (P1, P2.. Pn), akumulasi H/I/S/A, serta persentase kehadiran otomatis.
+   - Unduhan format Excel native (`.xlsx`) dan format cetak resmi / PDF print.
+2. **Rekapitulasi Nilai Siswa (`/academic/grades`):**
+   - Agregasi nilai rata-rata tugas (`quizzes` tipe `assignment`) dan ujian (`quizzes` tipe `quiz`).
+   - **Konfigurasi Bobot Penilaian Transparan:** Guru dapat menyesuaikan persentase bobot penilaian langsung di halaman (default: 40% Tugas + 60% Ujian).
+   - Perhitungan Nilai Akhir otomatis beserta konversi Predikat Akademik:
+     - **A:** $\ge 85$
+     - **B:** $75 - 84.9$
+     - **C:** $65 - 74.9$
+     - **D:** $50 - 64.9$
+     - **E:** $< 50$
+   - Fitur update nilai dan feedback langsung dari guru.
+   - Ekspor Excel (.xlsx) dan Cetak Rapor Nilai / PDF print.
+3. **Rekapitulasi Tugas Pembelajaran (`/academic/assignments`):**
+   - Pemantauan status pengerjaan: Belum Mengumpulkan, Sudah Mengumpulkan, Terlambat, dan Sudah Dinilai.
+   - Rekap nilai tugas dan umpan balik guru. Ekspor XLSX & Cetak PDF.
+4. **Rekapitulasi & Sebaran Ujian (`/academic/exams`):**
+   - Analisis statistik evaluasi: Nilai tertinggi, nilai terendah, nilai rata-rata kelas.
+   - Grafik distribusi predikat siswa (A, B, C, D, E) untuk evaluasi mutu butir soal. Ekspor XLSX & Cetak PDF.
+5. **Laporan Perkembangan Profil Akademik 360° Siswa (`/academic/reports`):**
+   - Daftar rekam jejak akademik siswa per kelas mata pelajaran.
+   - **Profil Akademik Individual (`/academic/reports/student/{id}`):** Lembar komprehensif 360° satu siswa yang menggabungkan rekap kehadiran, daftar seluruh tugas yang dikumpulkan, daftar hasil ujian, dan predikat akhir siswa.
 
 ---
 
-### 4.7 Impor Soal Word & AI Question Generator
-
-EDUVA menyediakan 2 metode pembuatan soal tanpa merombak alur manual:
-
-#### A. Impor Soal via Template Microsoft Word (.docx)
-- Guru dapat mengunduh template resmi (.docx) untuk tipe Pilihan Ganda maupun Esai.
-- Sistem mengekstrak struktur soal, opsi (A, B, C, D, E), dan kunci jawaban menggunakan `WordQuestionService` (`phpoffice/phpword`).
-- Dilengkapi halaman **Preview & Konfirmasi** sebelum soal disimpan ke database.
-
-#### B. AI Question Generator
-Fitur generator soal otomatis bertenaga Google Gemini:
-1. **Upload Dokumen Sumber:** Mendukung format `.pdf`, `.doc`, `.docx`, `.ppt`, `.pptx`, dan `.txt`.
-2. **Ekstraksi Dokumen:** Ditangani oleh `DocumentTextExtractor` yang membersihkan teks materi pembelajaran.
-3. **Konfigurasi Guru:**
-   - **Jenis Soal:** Pilihan Ganda atau Esai (salah satu jenis per proses).
-   - **Jumlah Soal:** Input angka numerik (1–20) dengan kontrol penambah/pengurang.
-   - **Tingkat Kesulitan:** Mudah, Sedang, Sulit, atau Campuran.
-4. **Struktur JSON Hasil AI:** `GeminiService::generateJson` menghasilkan array terstruktur dengan teks pertanyaan, opsi jawaban, kunci jawaban yang benar, dan pembahasan ringkas.
-5. **Interactive Preview Editor:**
-   - Guru dapat membaca hasil generate sebelum disimpan.
-   - Tersedia tombol edit langsung pada tiap soal, hapus soal yang tidak relevan, serta tombol **Generate Ulang Soal Spesifik** jika ada satu soal yang kurang sesuai.
-   - Tombol **Simpan ke Bank Soal** memasukkan seluruh soal ke tabel `questions` dan `options`.
+### 4.7 Kuis, Evaluasi Daring & Pengawasan Anti-Cheating
+- **Server Timer Synchronization:** Durasi ujian (jam & menit) disinkronkan dengan jam server melalui tabel `exam_sessions`. Refresh halaman tidak mereset waktu pengerjaan.
+- **Otomatis Submit (Auto-Submit):** Saat waktu berakhir, sistem otomatis mengumpulkan jawaban siswa dan menandai sesi sebagai `time_out`.
+- **Deteksi Kecurangan Berpindah Tab (`detect_tab_switch`):**
+  - Pemantauan event `visibilitychange` dan `blur` pada browser siswa.
+  - Setiap kali siswa meninggalkan tab kuis, log pelanggaran dicatat ke tabel `exam_logs` via AJAX.
 
 ---
 
-### 4.8 Asisten Pembelajaran Cerdas (AI Tutor)
-Asisten tutor interaktif yang berfokus mendampingi siswa belajar mandiri:
-1. **Pembatasan Konteks Ketat (Context Scoping):**
-   - Siswa **hanya** dapat memilih kelas yang sedang diikutinya secara aktif.
-   - Dropdown pertemuan mengambil data materi via AJAX `/ai-tutor/courses/{courseId}/meetings`.
-   - AI hanya menerima konten dan materi dari pertemuan yang dipilih, bukan seluruh isi database kelas.
-   - **Konteks Otomatis Halaman:** Tautan *"Tanya AI Tutor"* dari halaman materi/pertemuan otomatis membuka AI Tutor dengan parameter `course_id` dan `meeting_id` yang sudah terisi.
-2. **5 Mode Belajar Aktif:**
-   - *Tanya Jawab:* Diskusi bebas konsep dan contoh.
-   - *Penjelasan Sederhana:* Analogi sehari-hari tanpa jargon rumit.
-   - *Ringkasan Materi:* Format terstruktur (Inti pembahasan, poin kunci, kesimpulan).
-   - *Latihan Soal Interaktif:* AI memberikan soal latihan **satu per satu**, memeriksa jawaban siswa, memberikan skor, lalu lanjut ke soal berikutnya.
-   - *Persiapan Ujian:* Bedah kisi-kisi dan kesalahan umum siswa.
-3. **UI Chat Modern & Responsif:**
-   - Rendering Markdown dengan highlight sintaks kode via `highlight.js` dan sanitasi HTML via `DOMPurify`.
-   - Pratinjau kode HTML dalam iframe terisolasi (*sandboxed*).
-   - Bubble chat proporsional (*fit-content*) di sisi kanan untuk pengguna, sisi kiri untuk asisten.
-   - Deteksi smart-scroll dan tombol floating *"Pesan baru di bawah"*.
-   - Ukuran proporsional di mobile/tablet (`< lg`) agar tidak terlihat *nge-zoom*.
+### 4.8 Pembuatan Soal Word & AI Question Generator
+1. **Impor Soal Microsoft Word (.docx):** Ekstraksi soal pilihan ganda dan esai via template Word resmi menggunakan `WordQuestionService` dengan pratinjau sebelum simpan.
+2. **AI Question Generator (Google Gemini):**
+   - Unggah materi dalam format `.pdf`, `.doc`, `.docx`, `.ppt`, `.pptx`, dan `.txt`.
+   - Pembersihan teks pembelajaran via `DocumentTextExtractor`.
+   - Generator soal pilihan ganda atau esai dengan pengaturan jumlah soal (1–20) dan tingkat kesulitan (Mudah, Sedang, Sulit, Campuran).
+   - Pratinjau interaktif: Guru dapat mengedit soal hasil AI, menghapus soal tertentu, atau meregenerasi butir soal spesifik sebelum disimpan ke bank soal kuis.
 
 ---
 
-### 4.9 Presensi & Kehadiran Kelas
-- **Sesi Presensi:** Dibuat per pertemuan dengan rentang waktu mulai dan selesai.
-- **Pencatatan Status Siswa:** Siswa mengisi status *Hadir*, *Izin*, atau *Sakit* disertai catatan opsional selama sesi dibuka.
-- **Validasi Waktu:** Siswa tidak dapat mengisi presensi sebelum waktu mulai atau setelah waktu berakhir.
-- **Rekapitulasi Kehadiran:** Guru dapat melihat rekapitulasi status kehadiran seluruh siswa per pertemuan (`/attendances/{attendance}/report`).
-
----
-
-### 4.10 Pengumpulan Tugas (Assignments)
-- Siswa mengunggah berkas penugasan (PDF, DOCX, ZIP) sebelum batas waktu.
-- Guru mengakses daftar pengumpulan di `/assignments/{quiz}/submissions`.
-- Tersedia antarmuka pemberian nilai angka (0–100) dan catatan evaluasi (*feedback*) dari guru.
+### 4.9 Asisten Pembelajaran Cerdas (AI Tutor)
+Asisten tutor interaktif khusus siswa bertenaga Google Gemini:
+- **Konteks Materi Ketat:** Siswa hanya dapat berinteraksi dengan materi pertemuan dari kelas yang diikutinya secara aktif.
+- **5 Mode Belajar Interaktif:** *Tanya Jawab Bebas*, *Penjelasan Sederhana (Analogi)*, *Ringkasan Materi*, *Latihan Soal Interaktif (soal diberikan satu per satu)*, dan *Persiapan Ujian*.
+- **UI Chat Modern:** Highlight sintaks kode pemrograman via `highlight.js`, sanitasi HTML aman via `DOMPurify`, pratinjau kode live dalam iframe terisolasi, bubble chat proporsional, dan penyesuaian skala mobile/tablet yang nyaman.
 
 ---
 
@@ -234,9 +241,20 @@ Asisten tutor interaktif yang berfokus mendampingi siswa belajar mandiri:
 
 ```mermaid
 erDiagram
+    academic_years ||--o{ school_classes : "contains"
+    academic_years ||--o{ student_class_histories : "scopes"
+    academic_years ||--o{ courses : "academic_period"
+    
+    school_classes ||--o{ student_class_histories : "enrolls"
+    school_classes ||--o{ courses : "associated_with"
+    school_classes ||--o{ attendances : "records"
+    users ||--o{ school_classes : "homeroom_teacher"
+    
+    users ||--o{ student_class_histories : "history"
     users ||--o{ courses : "teaches"
     users ||--o{ course_user : "enrolled"
     courses ||--o{ course_user : "has_students"
+    
     courses ||--o{ materials : "contains"
     courses ||--o{ quizzes : "contains"
     courses ||--o{ attendances : "contains"
@@ -246,11 +264,14 @@ erDiagram
     questions ||--o{ options : "has_options"
     quizzes ||--o{ submissions : "receives"
     quizzes ||--o{ exam_sessions : "tracks"
+    quizzes ||--o{ exam_logs : "records"
+    
     users ||--o{ submissions : "submits"
     users ||--o{ exam_sessions : "attempts"
+    users ||--o{ exam_logs : "triggers"
     
     attendances ||--o{ attendance_logs : "records"
-    users ||--o{ attendance_logs : "logs"
+    users ||--o{ attendance_logs : "attends"
     
     users ||--o{ ai_conversations : "owns"
     courses ||--o{ ai_conversations : "scopes"
@@ -258,200 +279,141 @@ erDiagram
     ai_conversations ||--o{ ai_messages : "contains"
 ```
 
-### 5.1 Rincian Entitas Penting
-1. **`users`:** `id`, `name`, `email`, `identity_number` (NIP/NIM/admin), `password`, `role` (`admin`|`guru`|`siswa`), `must_change_password`, `is_active`.
-2. **`courses`:** `id`, `teacher_id` (FK `users`), `title`, `description`, `invitation_code`, `is_active`.
-3. **`course_user`:** `course_id`, `user_id` (Pivot pendaftaran siswa).
-4. **`materials`:** `id`, `course_id`, `topic` (Pertemuan), `type` (`file`|`page`|`video`|`label`), `title`, `content`, `file_path`, `video_url`, `order`, `is_visible`.
-5. **`quizzes`:** `id`, `course_id`, `topic`, `title`, `description`, `type` (`quiz`|`assignment`), `duration` (menit), `start_time`, `deadline`, `detect_tab_switch`, `is_visible`.
-6. **`questions`:** `id`, `quiz_id`, `question_text`, `type` (`multiple_choice`|`essay`), `points`, `order`, `explanation`.
-7. **`options`:** `id`, `question_id`, `option_text`, `is_correct`.
-8. **`exam_sessions`:** `id`, `quiz_id`, `user_id`, `started_at`, `expires_at`, `submitted_at`, `status` (`in_progress`|`submitted`|`time_out`).
-9. **`exam_logs`:** `id`, `quiz_id`, `user_id`, `event_type` (`tab_switch`|`window_blur`), `description`, `timestamp`.
-10. **`submissions`:** `id`, `quiz_id`, `user_id`, `file_path`, `score`, `feedback`, `answers` (JSON jawaban kuis).
-11. **`attendances`:** `id`, `course_id`, `topic`, `title`, `description`, `start_time`, `end_time`, `is_active`, `is_visible`.
-12. **`attendance_logs`:** `id`, `attendance_id`, `user_id`, `status` (`hadir`|`izin`|`sakit`|`alpa`), `note`.
-13. **`announcements`:** `id`, `course_id`, `user_id`, `topic`, `content`.
-14. **`ai_conversations`:** `id`, `user_id`, `course_id`, `material_id`, `title`, `study_mode`, `difficulty`.
-15. **`ai_messages`:** `id`, `conversation_id`, `role` (`user`|`assistant`|`system`), `content`, `sources` (JSON).
-16. **`activity_logs`:** `id`, `user_id`, `action`, `description`, `ip_address`, `user_agent`.
-17. **`system_settings`:** `id`, `key`, `value`, `type`, `description`.
+### 5.1 Rincian Kamus Data Entitas
+1. **`users`:** `id`, `name`, `email`, `identity_number` (NIP/NIM/username), `password`, `role` (`admin`|`guru`|`siswa`), `must_change_password`, `is_active`.
+2. **`academic_years`:** `id`, `name` (misal `2026/2027`), `semester` (`Ganjil`|`Genap`), `is_active`, `start_date`, `end_date`, `status` (`active`|`archived`|`upcoming`).
+3. **`school_classes`:** `id`, `academic_year_id`, `name` (misal `12 IPA A`), `level` (`10`|`11`|`12`), `department` (`MIPA`|`IPS`|`Umum`), `homeroom_teacher_id` (FK `users`), `status` (`active`|`archived`).
+4. **`student_class_histories`:** `id`, `user_id`, `school_class_id`, `academic_year_id`, `status` (`active`|`moved`|`graduated`), `assigned_at`, `moved_at`, `notes`.
+5. **`teacher_class_assignments`:** `id`, `teacher_id`, `school_class_id`, `course_id`, `academic_year_id`, `role_title`.
+6. **`courses`:** `id`, `teacher_id`, `school_class_id`, `academic_year_id`, `title`, `description`, `invitation_code`, `status`, `color`.
+7. **`course_user`:** `course_id`, `user_id` (Pivot pendaftaran siswa ke mata pelajaran).
+8. **`materials`:** `id`, `course_id`, `topic`, `type` (`file`|`page`|`video`|`label`), `title`, `content`, `file_path`, `video_url`, `order`, `is_visible`.
+9. **`quizzes`:** `id`, `course_id`, `topic`, `title`, `description`, `type` (`quiz`|`assignment`), `duration` (menit), `start_time`, `deadline`, `detect_tab_switch`, `order`, `is_visible`.
+10. **`questions`:** `id`, `quiz_id`, `question_text`, `type` (`multiple_choice`|`essay`), `points`, `order`, `explanation`.
+11. **`options`:** `id`, `question_id`, `option_text`, `is_correct`.
+12. **`submissions`:** `id`, `quiz_id`, `user_id`, `file_path`, `score`, `feedback`, `answers` (JSON jawaban kuis).
+13. **`exam_sessions`:** `id`, `quiz_id`, `user_id`, `started_at`, `expires_at`, `submitted_at`, `status` (`in_progress`|`submitted`|`time_out`).
+14. **`exam_logs`:** `id`, `quiz_id`, `user_id`, `event_type` (`tab_switch`|`window_blur`), `description`, `timestamp`.
+15. **`attendances`:** `id`, `course_id`, `school_class_id`, `topic`, `title`, `description`, `start_time`, `end_time`, `is_active`, `is_visible`.
+16. **`attendance_logs`:** `id`, `attendance_id`, `user_id`, `status` (`hadir`|`izin`|`sakit`|`alpa`), `note`.
+17. **`announcements`:** `id`, `course_id`, `user_id`, `topic`, `content`.
+18. **`ai_conversations`:** `id`, `user_id`, `course_id`, `material_id`, `title`, `study_mode`, `difficulty`.
+19. **`ai_messages`:** `id`, `conversation_id`, `role` (`user`|`assistant`|`system`), `content`, `sources` (JSON).
+20. **`activity_logs`:** `id`, `user_id`, `action`, `description`, `ip_address`, `user_agent`.
+21. **`system_settings`:** `id`, `key`, `value`, `type`, `description`.
 
 ---
 
 ## 6. Standar Desain UI/UX & Design Tokens
 
-Sesuai aturan utama **"desainnya sebisa mungkin jangan AI SLOP"**, EDUVA menerapkan tampilan aplikasi web modern, fungsional, dan tenang:
+Sesuai aturan utama **"desainnya sebisa mungkin jangan AI SLOP"**, EDUVA menerapkan tata desain profesional, bersih, elegan, dan fungsional:
 
 ### 6.1 Palet Warna Resmi
 ```css
 :root {
-  --eduva-bg-page: #F5F8FC;        /* Latar belakang utama halaman */
-  --eduva-bg-card: #FFFFFF;        /* Latar kartu & modal */
-  --eduva-border: #E5EAF0;         /* Border netral halus */
-  --eduva-border-input: #D7DFE9;   /* Border input field */
+  --eduva-bg-page: #F5F8FC;        /* Latar belakang kanvas aplikasi */
+  --eduva-bg-card: #FFFFFF;        /* Latar kartu, tabel & modal */
+  --eduva-border: #E5EAF0;         /* Garis pemisah netral lembut */
+  --eduva-border-input: #D7DFE9;   /* Garis tepi field input */
 
-  --eduva-text-main: #263445;      /* Teks judul & isi utama */
-  --eduva-text-secondary: #718096; /* Teks petunjuk & label sekunder */
+  --eduva-text-main: #263445;      /* Teks judul & label utama */
+  --eduva-text-secondary: #718096; /* Teks petunjuk & keterangan sekunder */
 
-  --eduva-primary: #438FCE;        /* Warna primer tombol aksi & link aktif */
-  --eduva-primary-hover: #387EB8;  /* Hover tombol primer */
-  --eduva-primary-light: #DFEAF9;  /* Badge konteks & latar sorot primer */
+  --eduva-primary: #438FCE;        /* Aksen biru primer EDUVA */
+  --eduva-primary-hover: #357ebd;  /* Hover interaksi primer */
+  --eduva-primary-light: #DFEAF9;  /* Badge konteks & indikator aktif */
+  --eduva-primary-dark: #2E6C9E;   /* Teks kontras tinggi aksen biru */
 
-  --eduva-success: #32865B;        /* Badge berkas/presensi sukses */
-  --eduva-warning: #B8873E;        /* Badge pengumuman/anti-cheat */
-  --eduva-danger: #C54B4B;         /* Badge error & tombol hapus */
+  --eduva-success: #10B981;        /* Hadir / Nilai Baik / Sukses */
+  --eduva-warning: #F59E0B;        /* Izin / Perlu Perhatian / Pending */
+  --eduva-danger: #EF4444;         /* Alpa / Error / Tombol Hapus */
 }
 ```
 
-### 6.2 Kaidah Input & Komponen
-- **Input Field:** Tinggi minimum `44px` hingga `48px`, border tipis terlihat `#D7DFE9`, latar `#FAFBFD`, border radius `10px`–`11px`, focus ring `#438FCE/15`.
-- **Textarea:** Tinggi awal `110px`–`130px`, mendukung auto-resize saat teks bertambah panjang.
-- **Modal:** Header terpisah dengan border halus, konten scrollable di tengah, dan footer tombol aksi sticky di bagian bawah.
-- **Responsivitas:** Pada layar kecil (`< 640px` atau `< 1024px`), tata letak 2 kolom otomatis menjadi 1 kolom vertikal tanpa terjadinya *horizontal overflow*.
+### 6.2 Kaidah Komponen UI
+- **Input Field:** Tinggi konsisten `44px` hingga `48px`, border tipis `#D7DFE9`, latar netral, border-radius `10px`–`12px`, focus ring `#438FCE/20`.
+- **Textarea:** Tinggi awal `110px`–`130px`, mendukung pengetikan instruksi panjang dengan scroll internal yang nyaman.
+- **Badge & Pill:** Huruf kapital berukuran `10px`–`11px`, font-bold, background pastel dengan border tipis bertema sama.
+- **Modal:** Header bergaris pemisah, area konten scrollable, dan sticky footer dengan tombol aksi rata kanan.
+- **Layout Responsif:** Pada layar desktop menggunakan tata letak multi-kolom; otomatis menjadi satu kolom vertikal proporsional pada tablet dan smartphone tanpa *horizontal overflow*.
 
 ---
 
-## 7. Panduan Setup & Menjalankan Proyek (Developer Guide)
 
-### 7.1 Prasyarat Sistem
-- PHP `>= 8.2` dengan ekstensi: `pdo_sqlite` (atau `pdo_mysql`), `mbstring`, `xml`, `zip`, `gd`, `fileinfo`.
-- Composer `>= 2.2`
-- Node.js `>= 18.0` & NPM `>= 9.0`
 
-### 7.2 Langkah Instalasi Cepat
-1. **Clone & Masuk Direktori:**
-   ```bash
-   cd "e:\pemrogramman web 2\eduva"
-   ```
-
-2. **Instal Dependensi PHP:**
-   ```bash
-   composer install
-   ```
-
-3. **Konfigurasi Environment (.env):**
-   Salin `.env.example` ke `.env` jika belum ada:
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-4. **Konfigurasi API Key Google Gemini (Wajib untuk AI Tutor & AI Question Generator):**
-   Tambahkan API Key Gemini pada file `.env`:
-   ```env
-   GEMINI_API_KEY=AIzaSyD...
-   GEMINI_MODEL=gemini-flash-lite-latest
-   ```
-
-5. **Migrasi Database & Seeder:**
-   ```bash
-   php artisan migrate:fresh --seed
-   ```
-
-6. **Symlink Penyimpanan Berkas:**
-   ```bash
-   php artisan storage:link
-   ```
-
-7. **Instal Dependensi Frontend & Build:**
-   ```bash
-   npm install
-   npm run build
-   ```
-
-8. **Menjalankan Server Pengembangan:**
-   Buka terminal terpisah atau gunakan perintah gabungan:
-   ```bash
-   # Terminal 1: Backend Laravel
-   php artisan serve
-
-   # Terminal 2: Frontend Vite
-   npm run dev
-   ```
-   Aplikasi dapat diakses melalui peramban di `http://127.0.0.1:8000`.
-
----
-
-## 8. Panduan Pengujian & Quality Assurance
-
-EDUVA memiliki rangkaian automated feature test yang komprehensif. Developer wajib menjalankan pengujian sebelum melakukan commit perubahan kode.
-
-### 8.1 Menjalankan Test Suite
-```bash
-php artisan test
-```
-
-### 8.2 Daftar Test Utama & Cakupannya
-- `tests/Feature/AdminModuleTest.php`: Memverifikasi dashboard admin, CRUD pengguna, import massal, monitoring kelas, audit log, dan pengaturan sistem.
-- `tests/Feature/AiTutorContextTest.php`: Memverifikasi isolasi kelas AI Tutor, fetch pertemuan dinamis, auto-context dari URL, dan keamanan akses data materi siswa.
-- `tests/Feature/QuizAiGeneratorTest.php`: Memverifikasi ekstraksi teks dari berbagai format file (PDF, DOCX, PPTX, TXT) serta alur pembuatan soal pilihan ganda & esai berbasis Gemini AI.
-- `tests/Feature/AddActivityModalTest.php`: Memverifikasi modal penambahan aktivitas, dropdown pertemuan tanpa data dummy, pembuatan presensi, dan fitur hapus pertemuan.
-- `tests/Feature/QuizAntiCheatAndWordImportTest.php`: Memverifikasi log pindah tab (anti-cheating) dan parser dokumen Word template soal.
-- `tests/Feature/QuizDurationAndSessionTest.php`: Memverifikasi countdown server timer, kunci perubahan durasi saat ujian berjalan, dan auto-submit.
-- `tests/Feature/CourseAccordionStateTest.php`: Memverifikasi toggle button tunggal dan konfigurasi state persistensi pertemuan di browser.
-
-> [!NOTE]
-> Pada pengujian otomatis yang berinteraksi dengan API Gemini (`AiTutorContextTest` dan `QuizAiGeneratorTest`), servis `GeminiService` di-mocking agar tidak mengonsumsi kuota API nyata dan dapat berjalan konsisten di lingkungan CI/CD.
-
----
-
-## 9. Struktur Direktori Utama
+## 7. Struktur Direktori Proyek
 
 ```
 eduva/
 ├── app/
-│   ├── Http/Controllers/
-│   │   ├── AdminDashboardController.php
-│   │   ├── AdminUserController.php
-│   │   ├── AdminUserImportController.php
-│   │   ├── AdminCourseController.php
-│   │   ├── AdminSecurityController.php
-│   │   ├── AdminLogController.php
-│   │   ├── AdminSettingController.php
-│   │   ├── AiTutorController.php
-│   │   ├── AttendanceController.php
-│   │   ├── CourseController.php
-│   │   ├── MaterialController.php
-│   │   ├── QuizController.php
-│   │   ├── QuizAiGeneratorController.php
-│   │   ├── QuizImportController.php
-│   │   └── SubmissionController.php
-│   ├── Models/              # Course, Material, Quiz, Attendance, AiConversation, dll.
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── AdminAcademicMonitoringController.php  # Monitoring statistik makro institusi
+│   │   │   ├── AdminAcademicYearController.php        # Manajemen tahun ajaran & semester
+│   │   │   ├── AdminSchoolClassController.php         # Manajemen rombel, mutasi & penempatan siswa
+│   │   │   ├── AdminStudentPlacementController.php    # Roster status penempatan siswa
+│   │   │   ├── AdminDashboardController.php           # Dashboard ringkasan administrator
+│   │   │   ├── AdminUserController.php                # CRUD pengguna institusi
+│   │   │   ├── AdminUserImportController.php          # Import massal Excel/CSV terintegrasi kelas
+│   │   │   ├── AdminCourseController.php              # Pengawasan kelas mata pelajaran
+│   │   │   ├── AdminSecurityController.php            # Pusat keamanan & reset akun
+│   │   │   ├── AdminLogController.php                 # Audit log aktivitas sistem
+│   │   │   ├── AdminSettingController.php             # Pengaturan konfigurasi sistem
+│   │   │   ├── TeacherAttendanceController.php        # Absensi terpadu & matriks kehadiran
+│   │   │   ├── TeacherGradeRecapController.php        # Rekap nilai berbobot transparan & predikat
+│   │   │   ├── TeacherAssignmentRecapController.php   # Rekap pengumpulan tugas siswa
+│   │   │   ├── TeacherExamRecapController.php         # Rekap statistik & sebaran ujian
+│   │   │   ├── TeacherAcademicReportController.php    # Rapor profil perkembangan 360° siswa
+│   │   │   ├── AiTutorController.php                  # Asisten belajar interaktif siswa
+│   │   │   ├── Auth/PasswordController.php            # Modul ganti password mandiri
+│   │   │   ├── CourseController.php                   # Mata pelajaran & supervisi admin
+│   │   │   ├── MaterialController.php                 # Materi pembelajaran multi-tipe
+│   │   │   ├── QuizController.php                     # Ujian daring & anti-cheat
+│   │   │   ├── QuizAiGeneratorController.php          # Generator soal via AI Gemini
+│   │   │   └── QuizImportController.php               # Parser soal template Word
+│   ├── Models/
+│   │   ├── AcademicYear.php                           # Model Tahun Ajaran
+│   │   ├── SchoolClass.php                            # Model Kelas Rombel Sekolah
+│   │   ├── StudentClassHistory.php                    # Model Riwayat Penempatan Siswa
+│   │   ├── TeacherClassAssignment.php                 # Model Penugasan Guru
+│   │   ├── User.php                                   # Model Pengguna (Admin, Guru, Siswa)
+│   │   ├── Course.php                                 # Model Mata Pelajaran
+│   │   ├── Material.php                               # Model Berkas & Halaman Materi
+│   │   ├── Quiz.php                                   # Model Kuis & Penugasan
+│   │   ├── Question.php & Option.php                  # Model Butir Soal & Kunci Jawaban
+│   │   ├── Submission.php                             # Model Pengumpulan & Nilai Siswa
+│   │   ├── Attendance.php & AttendanceLog.php         # Model Sesi & Presensi Siswa
+│   │   └── ActivityLog.php                            # Model Rekam Jejak Sistem
 │   └── Services/
-│       ├── AiQuestionGeneratorService.php
-│       ├── DocumentTextExtractor.php
-│       ├── GeminiService.php
-│       └── WordQuestionService.php
-├── config/
-│   └── services.php         # Konfigurasi gemini API key & model
+│       ├── ExcelService.php                           # Generator XLSX native & parser CSV
+│       ├── GeminiService.php                          # Klien integrasi Google Gemini AI
+│       ├── AiQuestionGeneratorService.php             # Logika prompt & JSON soal AI
+│       ├── DocumentTextExtractor.php                  # Ekstraktor teks dokumen multi-format
+│       └── WordQuestionService.php                    # Ekstraktor soal Microsoft Word
 ├── database/
-│   ├── migrations/          # Seluruh migrasi skema database
-│   └── seeders/DatabaseSeeder.php
+│   ├── migrations/                                    # Migrasi skema database
+│   └── seeders/DatabaseSeeder.php                     # Seeder data pengguna & tahun ajaran default
 ├── resources/
-│   ├── css/app.css          # Desain token, typography Markdown AI Tutor
-│   ├── js/app.js
 │   └── views/
-│       ├── admin/           # Tampilan pusat kendali administrator
-│       ├── ai-tutor/        # Tampilan percakapan interaktif AI Tutor
-│       ├── attendance/      # Rekap kehadiran siswa
-│       ├── kelas/           # Detail kelas, alur alur pembelajaran, modal aktivitas
-│       ├── kuis/            # Ujian online, generator AI, preview generator, import Word
-│       ├── layouts/         # App shell layout & navigasi
-│       └── submissions/     # Lembar koreksi tugas siswa
+│       ├── admin/
+│       │   ├── academic/                              # Tampilan tahun ajaran, rombel, penempatan, monitoring
+│       │   ├── courses/                               # Monitoring mata pelajaran
+│       │   ├── security/ & logs/                      # Audit keamanan & log aktivitas
+│       │   └── users/                                 # Manajemen & import massal pengguna
+│       ├── teacher/
+│       │   └── academic/                              # Absensi, nilai, tugas, ujian, laporan 360
+│       ├── auth/
+│       │   └── change-password.blade.php              # Halaman ganti password mandiri
+│       ├── ai-tutor/                                  # Antarmuka obrolan AI Tutor
+│       ├── kelas/                                     # Outline pertemuan, alur accordion, modal aktivitas
+│       ├── kuis/                                      # Pengerjaan kuis, anti-cheat, generator soal AI
+│       └── layouts/                                   # Shell navigasi sidebar & header terpadu
 ├── routes/
-│   └── web.php              # Definisi seluruh rute aplikasi
-├── storage/app/public/      # File unggahan materi dan pengumpulan tugas
-└── tests/Feature/           # Automated feature tests
+│   ├── web.php                                        # Rute aplikasi utama
+│   └── auth.php                                       # Rute otentikasi & ganti password
+└── tests/Feature/                                     # 91 automated feature tests
 ```
 
 ---
 
-## 10. Roadmap Pengembangan Mendatang (Future Roadmap)
 
-Untuk developer yang ingin mengembangkan modul lanjutan:
-1. **Real-time Push Notification:** Integrasi Laravel Reverb / WebSockets untuk notifikasi tugas baru dan pesan diskusi forum.
-2. **REST API & Mobile Client:** Implementasi Laravel Sanctum untuk mendukung aplikasi native mobile (Android/iOS).
-3. **Ekspor Nilai Rapor & Analisis Capaian:** Fitur ekspor rekap nilai per mata pelajaran ke format Excel standar dinas pendidikan.
-4. **Interactive Rubric Grading:** Penilaian tugas berbasis rubrik kriteria untuk transparansi evaluasi pengajar.
-5. **Gamifikasi Pembelajaran:** Lencana (*badges*), poin keaktifan, dan streak belajar siswa untuk meningkatkan retensi belajar.
