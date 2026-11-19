@@ -1858,7 +1858,7 @@
                     selectedFileSize: '',
                     hours: 1,
                     minutes: 30,
-                    detectTabSwitch: false,
+                    detectTabSwitch: true,
 
                     attStart: makeDateField(config.initialStartDate, config.initialStartTime),
                     attEnd: makeDateField(config.initialEndDate, config.initialEndTime),

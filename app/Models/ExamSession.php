@@ -10,6 +10,7 @@ class ExamSession extends Model
     use HasFactory;
 
     protected $fillable = [
+        'policy_snapshot',
         'quiz_id',
         'user_id',
         'started_at',
@@ -19,6 +20,14 @@ class ExamSession extends Model
     ];
 
     protected $casts = [
+        'draft_files' => 'array',
+        'auto_submitted_at' => 'datetime',
+        'fullscreen_active' => 'boolean',
+        'connection_interrupted' => 'boolean',
+        'policy_snapshot' => 'array',
+        'draft_answers' => 'array',
+        'focus_lost_at' => 'datetime',
+        'last_heartbeat_at' => 'datetime',
         'started_at' => 'datetime',
         'expires_at' => 'datetime',
         'submitted_at' => 'datetime',
@@ -39,7 +48,7 @@ class ExamSession extends Model
      */
     public function getRemainingSecondsAttribute(): int
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return -1; // Tanpa batas waktu (unlimited)
         }
 
@@ -56,11 +65,10 @@ class ExamSession extends Model
      */
     public function isExpired(int $gracePeriodSeconds = 60): bool
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return false;
         }
 
         return now()->greaterThan($this->expires_at->copy()->addSeconds($gracePeriodSeconds));
     }
 }
-

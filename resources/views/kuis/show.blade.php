@@ -1,4 +1,5 @@
 <x-app-layout>
+    <a class="block p-4 text-blue-700" href="{{ url('/guru/ujian/'.$quiz->id.'/monitoring') }}">Live Monitoring Ujian</a>
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <div>

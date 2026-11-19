@@ -11,6 +11,19 @@ Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'ind
     ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/guru/ujian/{quiz}/monitoring/stream', [\App\Http\Controllers\ExamMonitoringController::class,'stream'])->middleware('throttle:60,1');
+    Route::post('/guru/ujian/{quiz}/monitoring/accommodation/{session}', [\App\Http\Controllers\ExamMonitoringController::class,'accommodation']);
+    Route::post('/kuis/{quiz}/monitoring/claim', [\App\Http\Controllers\ExamMonitoringController::class,'claim'])->middleware('throttle:30,1');
+    Route::post('/kuis/{quiz}/monitoring/upload', [\App\Http\Controllers\ExamMonitoringController::class,'upload'])->middleware('throttle:30,1');
+    Route::post('/guru/ujian/{quiz}/monitoring/end/{session}', [\App\Http\Controllers\ExamMonitoringController::class,'end']);
+    Route::post('/kuis/{quiz}/monitoring/events', [\App\Http\Controllers\ExamMonitoringController::class,'event'])->middleware('throttle:120,1');
+    Route::get('/kuis/{quiz}/monitoring/state', [\App\Http\Controllers\ExamMonitoringController::class,'state']);
+    Route::post('/guru/ujian/{quiz}/monitoring/settings', [\App\Http\Controllers\ExamMonitoringController::class,'settings']);
+    Route::post('/guru/ujian/{quiz}/monitoring/review/{log}', [\App\Http\Controllers\ExamMonitoringController::class,'review']);
+    Route::get('/guru/ujian/{quiz}/monitoring/export', [\App\Http\Controllers\ExamMonitoringController::class,'export']);
+    Route::post('/kuis/{quiz}/heartbeat', [\App\Http\Controllers\ExamMonitoringController::class, 'heartbeat'])->middleware('throttle:60,1');
+    Route::get('/guru/ujian/{quiz}/monitoring', [\App\Http\Controllers\ExamMonitoringController::class, 'index'])->name('exam.monitoring');
+    Route::get('/guru/ujian/{quiz}/monitoring/data', [\App\Http\Controllers\ExamMonitoringController::class, 'data'])->middleware('throttle:60,1');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

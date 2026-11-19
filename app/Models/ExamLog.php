@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ExamLog extends Model
 {
+    protected $casts = ['counted' => 'boolean', 'event_metadata' => 'array', 'client_timestamp' => 'datetime'];
+
     use HasFactory;
 
     protected $fillable = [

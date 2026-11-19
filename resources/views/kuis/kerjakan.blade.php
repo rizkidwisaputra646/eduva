@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+@php($examPolicy = array_replace(\App\Services\ExamMonitoringService::policy($quiz), $examSession?->policy_snapshot ?? []))
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
@@ -89,10 +90,15 @@
             </div>
             @endif
 
+            <p id="monitoring-notice" class="text-sm text-gray-600 my-4">Saat pengawasan aktif, EDUVA mencatat kehilangan fokus, perubahan visibilitas, fullscreen, dan interaksi sesuai aturan guru. Nama aplikasi lain, isi clipboard, layar, serta aktivitas perangkat lain tidak direkam. Kehilangan koneksi bukan pelanggaran. Memulai ujian berarti Anda memahami pemberitahuan ini.</p>
+            @php($examPolicy = array_replace(\App\Services\ExamMonitoringService::policy($quiz), $examSession?->policy_snapshot ?? []))
+            <div class="p-3 bg-blue-50 text-left text-sm my-3">Pengawasan: {{ $examPolicy['enabled'] ? 'Aktif' : 'Nonaktif' }} • Fullscreen: {{ $examPolicy['fullscreen'] ? 'Diperlukan' : 'Opsional' }} • Ambang insiden: {{ $examPolicy['threshold'] }} • Auto-submit pada ambang: {{ $examPolicy['auto_submit'] ? 'YA' : 'Tidak' }}. Batasan clipboard/menu: {{ $examPolicy['restrict_clipboard'] ? 'Aktif' : 'Sesuai pengaturan guru' }}.</div>
+            <label class="block text-sm my-3"><input type="checkbox" x-model="acknowledged"> Saya memahami aturan dan kebijakan pengawasan ujian.</label>
             <button 
+                aria-describedby="monitoring-notice"
                 type="button" 
                 @click="startExam()" 
-                :disabled="starting"
+                :disabled="starting || !acknowledged"
                 class="w-full sm:w-auto px-8 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg transition-all hover:scale-105 inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
                 <template x-if="!starting">
@@ -173,7 +179,7 @@
 
         <!-- Konten Butir Soal -->
         <main class="max-w-4xl mx-auto py-8 px-4 w-full flex-1">
-            <form x-ref="examForm" method="POST" action="{{ route('kuis.submit', $quiz->id) }}" enctype="multipart/form-data">
+            <form data-return-url="{{ route('kelas.show', $quiz->course_id) }}" x-ref="examForm" method="POST" action="{{ route('kuis.submit', $quiz->id) }}" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="is_timeout" x-model="isTimeOut">
                 
@@ -220,7 +226,7 @@
                 @endforelse
 
                 <div class="flex justify-end mt-8 pb-12">
-                    <button type="submit" onclick="return confirm('Apakah Anda yakin sudah menyelesaikan seluruh soal dan ingin mengumpulkan ujian?')" class="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer">
+                    <button type="submit"  class="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         <span>Selesai & Kumpulkan Ujian</span>
                     </button>
@@ -268,6 +274,7 @@
             Alpine.data('examApp', () => ({
                 started: {{ $isStarted ? 'true' : 'false' }},
                 starting: false,
+                acknowledged: false,
                 detectTabSwitch: {{ $quiz->detect_tab_switch ? 'true' : 'false' }},
                 hasDuration: {{ $quiz->duration && $quiz->duration > 0 ? 'true' : 'false' }},
                 remainingSeconds: {{ $remainingSeconds >= 0 ? $remainingSeconds : 0 }},
@@ -287,6 +294,10 @@
                 },
 
                 startExam() {
+                    if (!this.acknowledged) return;
+                    @if($examPolicy['fullscreen'])
+                    document.documentElement.requestFullscreen?.().catch(() => {});
+                    @endif
                     this.starting = true;
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
@@ -314,19 +325,14 @@
                     .catch(err => {
                         this.starting = false;
                         console.error('Error starting exam:', err);
-                        // Fallback jika offline: tetap mulai dengan durasi lokal
-                        this.started = true;
-                        this.startMonitoring();
+                        // Sesi harus dikonfirmasi server
+                        alert('Sesi belum dimulai. Periksa koneksi dan coba kembali.');
                     });
                 },
 
-                startMonitoring() {
-                    if (this.detectTabSwitch) {
-                        this.initTabMonitoring();
-                    }
-                    if (this.hasDuration) {
-                        this.initCountdownTimer();
-                    }
+                async startMonitoring() {
+                    const ready = await window.monitorExam(this).catch(() => { this._monitorStarted = false; return false; });
+                    if (ready && this.hasDuration) this.initCountdownTimer();
                 },
 
                 initCountdownTimer() {
@@ -343,15 +349,7 @@
                 },
 
                 triggerAutoSubmit() {
-                    this.isTimeOut = true;
-                    this.timeOutOverlay = true;
-
-                    // Beri jeda 1.2 detik agar siswa melihat overlay sebelum form tersubmit
-                    setTimeout(() => {
-                        if (this.$refs.examForm) {
-                            this.$refs.examForm.submit();
-                        }
-                    }, 1200);
+                    if (window.finishExam) window.finishExam(true);
                 },
 
                 get timerDisplay() {
@@ -367,54 +365,6 @@
                     } else {
                         return `${pad(minutes)}:${pad(seconds)}`;
                     }
-                },
-
-                initTabMonitoring() {
-                    document.addEventListener("visibilitychange", () => {
-                        if (document.visibilityState === 'hidden' && this.started && !this.timeOutOverlay) {
-                            this.recordViolation('Berpindah tab atau mengecilkan peramban');
-                        }
-                    });
-
-                    window.addEventListener("blur", () => {
-                        if (this.started && !this.violationModal && !this.timeOutOverlay) {
-                            this.recordViolation('Meninggalkan jendela peramban ujian');
-                        }
-                    });
-                },
-
-                recordViolation(reason) {
-                    const now = Date.now();
-                    if (now - this.lastViolationTime < 3000) return;
-                    this.lastViolationTime = now;
-                    this.violationCount++;
-
-                    this.violationMessage = `Sistem mendeteksi aktivitas: "${reason}" (Pelanggaran ke-${this.violationCount}). Kejadian ini dicatat dalam log ujian guru.`;
-                    this.violationModal = true;
-
-                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    fetch(`/kuis/${this.quizId}/log-event`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': token,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            event_type: 'tab_switch',
-                            details: reason
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data && data.total_violations) {
-                            this.violationCount = data.total_violations;
-                            this.violationMessage = `Sistem mendeteksi aktivitas: "${reason}" (Pelanggaran ke-${this.violationCount}). Kejadian ini dicatat dalam log ujian guru.`;
-                        }
-                    })
-                    .catch(err => {
-                        console.warn('Gagal mencatat log pelanggaran:', err);
-                    });
                 },
 
                 dismissViolation() {

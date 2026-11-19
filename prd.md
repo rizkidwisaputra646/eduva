@@ -1,7 +1,7 @@
 # Product Requirement Document (PRD) — LMS EDUVA
 
-> **Versi Dokumen:** 3.0 (Edisi Akademik Terpadu & Rekapitulasi Guru)  
-> **Status Proyek:** Aktif / Siap Produksi & Teruji Otomatis (91 Tests, 531 Assertions)  
+> **Versi Dokumen:** 4.0 (Pengawasan Ujian dan Akademik Terpadu)
+> **Status Proyek:** Teruji lokal: 106 tes PHP (636 assertions), 2 skenario browser; validasi perangkat SEB dan beban produksi tetap diperlukan.
 > **Target Pengguna:** Administrator Institusi, Tenaga Pengajar (Guru), Siswa (Murid)  
 > **Stack Utama:** Laravel 12 (PHP 8.2+), Blade, Tailwind CSS, Alpine.js, Vite, Google Gemini API, Native Excel/Document Services
 
@@ -417,3 +417,29 @@ eduva/
 ---
 
 
+
+## 8. Pengawasan Ujian: Browser Anti-Cheat dan Lockdown
+
+### Dua level pengawasan
+
+**Level 1 - Browser Anti-Cheat (cakupan EDUVA).** Pengawasan berjalan di browser tanpa instalasi aplikasi siswa. Sistem mencatat perpindahan tab atau perubahan visibilitas halaman, kehilangan dan kembalinya fokus, keluar dan masuk kembali ke fullscreen, serta interaksi ujian tertentu yang dapat dideteksi browser. Browser tidak dapat menjamin deteksi atau mencegah semua aktivitas di perangkat siswa; kejadian yang tercatat merupakan sinyal untuk ditinjau, bukan bukti otomatis kecurangan.
+
+Setiap insiden menyimpan identitas siswa dan ujian, jenis kejadian, waktu kejadian, waktu kembali atau durasi kehilangan fokus bila tersedia, dan urutan kejadian. Catatan tampil sebagai **Incident Timeline** yang dapat ditinjau guru. **Live Monitoring Guru** memperbarui status peserta dan insiden sedekat mungkin dengan waktu nyata. Antarmuka harus menunjukkan status koneksi/pembaruan dan waktu insiden agar guru dapat membedakan data terbaru dari data tertunda.
+
+**Violation Policy** dapat dikonfigurasi guru per ujian: jenis kejadian yang dicatat, tingkat peringatan, ambang pengulangan, serta tindakan ketika ambang tercapai. Kebijakan menjelaskan kepada siswa perilaku yang dipantau sebelum ujian dimulai. Insiden dan tindakan kebijakan dicatat untuk audit. Keputusan akademik tetap berada pada guru; sistem tidak otomatis menyimpulkan kecurangan hanya dari sinyal browser.
+
+**Level 2 - Lockdown Exam Environment (integrasi opsional).** Untuk ujian resmi yang memerlukan pembatasan lingkungan perangkat, EDUVA dapat menyediakan panduan integrasi dengan Safe Exam Browser atau aplikasi ujian khusus. Pembatasan situs dan aplikasi bergantung pada perangkat, konfigurasi, dan kemampuan solusi yang dipakai, sehingga memerlukan persiapan perangkat siswa serta kebijakan sekolah. Level ini adalah integrasi terpisah dan tidak boleh diklaim sebagai kemampuan browser biasa.
+
+### Rekomendasi implementasi
+
+Prioritaskan implementasi Level 1 secara menyeluruh: Live Monitoring Guru, Incident Timeline, dan Violation Policy. Pertahankan pencatatan waktu, durasi kehilangan fokus hingga siswa kembali, serta pengulangan insiden agar guru dapat memahami konteks setiap peserta. Sediakan Level 2 sebagai opsi untuk ujian yang membutuhkan lingkungan perangkat terkunci, setelah persyaratan perangkat dan kebijakan institusi ditetapkan.
+
+## 9. EDUVA v4.0 — Implementasi Pengawasan Ujian
+
+Level 1 menyediakan monitoring browser aktif per sesi, korelasi blur/hidden, waktu kembali dan durasi, deteksi fullscreen/interaksi halaman, heartbeat, status koneksi, snapshot kebijakan, registrasi instance, pencegahan sesi bersamaan, autosave/recovery, auto-submit opsional pada ambang, review/false positive dengan audit, akomodasi siswa, pengakhiran oleh guru dan laporan CSV/XLSX/cetak PDF. Timer dan finalisasi ditentukan server. Pengiriman kejadian memakai UUID, validasi enrollment/ownership, CSRF dan rate limit; finalisasi menggunakan transaksi dan kunci sesi agar tidak dijalankan berulang.
+
+Dashboard guru memakai polling terautentikasi dengan timeline incremental/paginasi dan SSE opsional pada deployment multi-worker. Timeout dan retensi bukti dijalankan lewat scheduler. Preset Standard mencatat tanpa penalti otomatis; Strict menambahkan fullscreen; Custom mengatur aturan tersendiri. Pengeditan kebijakan tidak mengubah sesi aktif. Pengecualian aksesibilitas dilakukan melalui akomodasi yang diaudit.
+
+Level 2 disediakan sebagai integrasi gerbang Config Key request hash SEB, bukan klaim penguncian oleh situs. Distribusi konfigurasi/perangkat serta uji aplikasi SEB di sekolah tetap diperlukan. Dukungan header tidak mencakup otomatis seluruh modern WebView macOS/iOS. Browser biasa tidak dapat memastikan nama aplikasi lain, URL tab lain, proses OS, screenshot, atau aktivitas perangkat kedua. Kegagalan heartbeat bukan bukti kecurangan.
+
+Panduan lengkap, keterbatasan, struktur komponen, deployment, retensi dan pengujian: [docs/exam-monitoring.md](docs/exam-monitoring.md).

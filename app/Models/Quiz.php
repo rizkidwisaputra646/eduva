@@ -24,6 +24,7 @@ class Quiz extends Model
     ];
 
     protected $casts = [
+        'monitoring_policy' => 'array',
         'start_time' => 'datetime',
         'deadline' => 'datetime',
         'duration' => 'integer',
@@ -58,7 +59,7 @@ class Quiz extends Model
 
     public function getFormattedDurationAttribute(): string
     {
-        if (!$this->duration || $this->duration <= 0) {
+        if (! $this->duration || $this->duration <= 0) {
             return 'Tanpa Batas Durasi';
         }
 

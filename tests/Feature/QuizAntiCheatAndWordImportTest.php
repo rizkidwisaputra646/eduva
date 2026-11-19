@@ -101,6 +101,7 @@ class QuizAntiCheatAndWordImportTest extends TestCase
         ]);
 
         // Student triggers tab switch log
+        $this->actingAs($this->student)->postJson(route('kuis.start', $quiz))->assertOk();
         $response = $this->actingAs($this->student)->postJson(route('kuis.log-event', $quiz->id), [
             'event_type' => 'tab_switch',
             'details' => 'Berpindah tab atau mengecilkan peramban',
@@ -144,6 +145,7 @@ class QuizAntiCheatAndWordImportTest extends TestCase
             'is_visible' => true,
         ]);
 
+        $this->actingAs($this->student)->postJson(route('kuis.start', $quiz))->assertOk();
         $response = $this->actingAs($this->student)->postJson(route('kuis.log-event', $quiz->id), [
             'event_type' => 'tab_switch',
             'details' => 'Berpindah tab',

@@ -110,3 +110,7 @@ Jalankan automated test suite:
 ```bash
 php artisan test
 ```
+
+## Pengawasan ujian EDUVA v4.0
+
+Panduan fitur, kebijakan, setup scheduler, SSE opsional, integrasi Safe Exam Browser, privasi dan pengujian tersedia di [docs/exam-monitoring.md](docs/exam-monitoring.md).

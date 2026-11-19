@@ -46,3 +46,7 @@ Thumbs.db
 .phpactor.json
 Homestead.json
 Homestead.yaml
+
+/test-results/
+/playwright-report/
+/storage/framework/testing/

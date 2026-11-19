@@ -204,7 +204,7 @@ class QuizDurationAndSessionTest extends TestCase
             'started_at' => now()->subMinutes(31),
             'expires_at' => now()->subMinute(),
             'status' => 'in_progress',
-        ]);
+        ])->forceFill(['draft_answers' => [$mcq->id => (string) $opt->id]])->save();
 
         // Submit triggered automatically by timer timeout
         $response = $this->actingAs($this->student)->post(route('kuis.submit', $quiz->id), [
